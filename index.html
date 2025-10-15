@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Game Launcher</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    #game-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background: #1e90ff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #0d6efd;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Select a Game</h1>
+  <div id="game-buttons">Loading games...</div>
+
+  <script>
+  fetch('games.json')
+    .then(response => response.json())
+    .then(games => {
+      const container = document.getElementById('game-buttons');
+      container.innerHTML = '';
+
+      if (games.length === 0) {
+        container.textContent = 'No games found.';
+        return;
+      }
+
+      games.forEach(game => {
+        const button = document.createElement('button');
+        button.textContent = game.label;
+        button.onclick = () => {
+          window.location.href = game.path;
+        };
+        container.appendChild(button);
+      });
+    })
+    .catch(error => {
+      console.error('Error loading games:', error);
+      document.getElementById('game-buttons').textContent = 'Failed to load games.';
+    });
+</script>
+
+
+</body>
+</html>
+    

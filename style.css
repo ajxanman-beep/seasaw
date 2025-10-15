@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home Page</title>
+  <style>
+    /* Basic button styling */
+    button {
+      background-color: #4CAF50;  /* Green background */
+      color: white;              /* White text */
+      padding: 15px 30px;        /* Bigger button */
+      font-size: 16px;           /* Larger text */
+      border: none;              /* No border */
+      border-radius: 8px;        /* Rounded corners */
+      cursor: pointer;           /* Pointer on hover */
+      transition: 0.3s;          /* Smooth hover effect */
+    }
+
+    /* What happens when you hover */
+    button:hover {
+      background-color: #45a049; /* Darker green */
+    }
+
+    /* Optional: when you click it */
+    button:active {
+      transform: scale(0.95); /* Shrinks a little when pressed */
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to My Website!</h1>
+  
+  <!-- Button with style -->
+  <button onclick="window.location.href='supermario64.html'">SuperMario64</button>
+
+</body>
+</html>
