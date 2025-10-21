@@ -1,15 +1,30 @@
 fetch('games.json')
-  .then(res => res.json())
+  .then(response => response.json())
   .then(games => {
-    // Sort alphabetically (case-insensitive)
-    games.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+    const container = document.getElementById('game-buttons');
+    container.innerHTML = '';
 
-    // Then render buttons or links
-    const container = document.getElementById('game-list');
-    for (const game of games) {
-      const btn = document.createElement('button');
-      btn.textContent = game.label;
-      btn.onclick = () => window.location.href = game.path;
-      container.appendChild(btn);
+    if (games.length === 0) {
+      container.textContent = 'No games found.';
+      return;
     }
+
+    // ✅ Sort alphabetically (case-insensitive + numeric-aware)
+    games.sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })
+    );
+
+    // ✅ Create and display buttons
+    games.forEach(game => {
+      const button = document.createElement('button');
+      button.textContent = game.label;
+      button.onclick = () => {
+        window.location.href = game.path;
+      };
+      container.appendChild(button);
+    });
+  })
+  .catch(error => {
+    console.error('Error loading games:', error);
+    document.getElementById('game-buttons').textContent = 'Failed to load games.';
   });
