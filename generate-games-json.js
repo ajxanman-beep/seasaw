@@ -25,8 +25,6 @@ function formatLabel(filename) {
     .replace(/\b\w/g, char => char.toUpperCase());
 }
 
-
-
 // Main function
 async function generateGameList() {
   const entries = await fs.readdir('.', { withFileTypes: true });
@@ -48,8 +46,11 @@ async function generateGameList() {
     }
   }
 
+  // ✅ Sort games alphabetically by label
+  games.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+
   await fs.writeFile(OUTPUT, JSON.stringify(games, null, 2));
-  console.log(`✅ ${OUTPUT} generated with ${games.length} games.`);
+  console.log(`✅ ${OUTPUT} generated with ${games.length} games (alphabetically sorted).`);
 }
 
 generateGameList();
