@@ -22,6 +22,9 @@
       padding: 15px;
       background-color: #000;
       border-bottom: 2px solid #222;
+      position: sticky;   /* ✅ keeps it visible while scrolling */
+      top: 0;             /* ✅ pin to top of the screen */
+      z-index: 100;       /* ✅ make sure it stays above content */
     }
 
     h1 {
@@ -70,8 +73,8 @@
 
     #game-buttons {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
       justify-items: center;
     }
 
@@ -79,10 +82,19 @@
       background-color: #3355ff;
       color: white;
       border: none;
-      padding: 8px 15px;
+      padding: 8px 10px;
       border-radius: 4px;
       cursor: pointer;
       transition: background 0.2s;
+      text-align: center;
+      white-space: normal;       /* ✅ allow wrapping */
+      word-wrap: break-word;     /* ✅ break long names */
+      overflow-wrap: anywhere;   /* ✅ break even long words */
+      line-height: 1.2;
+      font-size: 14px;
+      width: 100%;               /* ✅ make each fill its grid cell */
+      box-sizing: border-box;
+      min-height: 40px;
     }
 
     .game-btn:hover {
@@ -96,7 +108,7 @@
     <h1>Game Launcher</h1>
     <button id="copyBtn">Copy Link</button>
     <label for="search"><strong>Search:</strong></label>
-    <input type="text" id="search" placeholder="">
+    <input type="text" id="search" placeholder="Type to search...">
   </div>
 
   <div class="content">
