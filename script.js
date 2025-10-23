@@ -7,7 +7,7 @@ document.getElementById('copyBtn').addEventListener('click', () => {
 
 // Open misc page
 document.getElementById('miscBtn').addEventListener('click', () => {
-  window.location.href = 'misc/misc.html';
+  window.location.href = 'misc/Proxy.html';
 });
 
 // Load games and enable search
