@@ -1,16 +1,21 @@
-// Copy the current page link
+// ✅ Copy current page link
 document.getElementById('copyBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(window.location.href)
     .then(() => alert('🔗 Link copied to clipboard!'))
     .catch(() => alert('❌ Failed to copy link.'));
 });
 
-// Open misc page
+// ✅ Open Proxy page
 document.getElementById('miscBtn').addEventListener('click', () => {
   window.location.href = 'Misc/Proxy.html';
 });
 
-// Load games and enable search
+// ✅ Open Movie Player page
+document.getElementById('movieBtn').addEventListener('click', () => {
+  window.location.href = 'Misc/MoviePlayer.html';
+});
+
+// ✅ Load and display games
 fetch('games.json')
   .then(response => response.json())
   .then(games => {
@@ -18,9 +23,11 @@ fetch('games.json')
     const searchInput = document.getElementById('search');
 
     // Sort alphabetically (case-insensitive)
-    games.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
+    games.sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })
+    );
 
-    // Function to display games
+    // Function to show games
     function displayGames(filteredGames) {
       container.innerHTML = '';
 
@@ -33,9 +40,7 @@ fetch('games.json')
         const button = document.createElement('button');
         button.textContent = game.label;
         button.className = 'game-btn';
-        button.onclick = () => {
-          window.location.href = game.path;
-        };
+        button.onclick = () => window.location.href = game.path;
         container.appendChild(button);
       });
     }
@@ -43,7 +48,7 @@ fetch('games.json')
     // Initial load
     displayGames(games);
 
-    // Filter on search input
+    // ✅ Search filter (case-insensitive)
     searchInput.addEventListener('input', () => {
       const query = searchInput.value.toLowerCase();
       const filtered = games.filter(g => g.label.toLowerCase().includes(query));
