@@ -5,43 +5,105 @@
   <title>Game Launcher</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
-      text-align: center;
-      padding: 40px;
-    }
-    h1 {
-      margin-bottom: 30px;
-    }
-    #game-buttons {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      border: none;
-      background: #1e90ff;
+      background-color: black;
       color: white;
-      border-radius: 6px;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Top bar */
+    .top-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      background-color: #000;
+      border-bottom: 2px solid #222;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    button, input {
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 14px;
+    }
+
+    #copyBtn {
+      background-color: #005eff;
+      color: white;
       cursor: pointer;
       transition: background 0.2s;
     }
-    button:hover {
-      background: #0d6efd;
+
+    #copyBtn:hover {
+      background-color: #0074ff;
+    }
+
+    #search {
+      background-color: #002bff;
+      color: white;
+      width: 150px;
+      outline: none;
+    }
+
+    /* Game section */
+    .content {
+      background-color: #0000a8;
+      margin: 20px auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 700px;
+      border-radius: 6px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    #game-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 15px;
+      justify-items: center;
+    }
+
+    .game-btn {
+      background-color: #3355ff;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .game-btn:hover {
+      background-color: #1e40ff;
     }
   </style>
 </head>
 <body>
 
-  <h1>Select a Game</h1>
-  <div id="game-buttons">Loading games...</div>
+  <div class="top-bar">
+    <h1>Game Launcher</h1>
+    <button id="copyBtn">Copy Link</button>
+    <label for="search"><strong>Search:</strong></label>
+    <input type="text" id="search" placeholder="">
+  </div>
 
-  <!-- ✅ External JavaScript file -->
+  <div class="content">
+    <h2>Games</h2>
+    <div id="game-buttons">Loading games...</div>
+  </div>
+
   <script src="script.js"></script>
-
 </body>
 </html>
