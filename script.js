@@ -5,6 +5,11 @@ document.getElementById('copyBtn').addEventListener('click', () => {
     .catch(() => alert('❌ Failed to copy link.'));
 });
 
+// Open misc page
+document.getElementById('miscBtn').addEventListener('click', () => {
+  window.location.href = 'misc/misc.html';
+});
+
 // Load games and enable search
 fetch('games.json')
   .then(response => response.json())

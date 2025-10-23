@@ -39,14 +39,14 @@
       font-size: 14px;
     }
 
-    #copyBtn {
+    #copyBtn, #miscBtn {
       background-color: #005eff;
       color: white;
       cursor: pointer;
       transition: background 0.2s;
     }
 
-    #copyBtn:hover {
+    #copyBtn:hover, #miscBtn:hover {
       background-color: #0074ff;
     }
 
@@ -107,6 +107,7 @@
   <div class="top-bar">
     <h1>Game Launcher</h1>
     <button id="copyBtn">Copy Link</button>
+    <button id="miscBtn">Misc Page</button> <!-- ✅ new button -->
     <label for="search"><strong>Search:</strong></label>
     <input type="text" id="search" placeholder="Type to search...">
   </div>
