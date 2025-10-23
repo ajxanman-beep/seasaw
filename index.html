@@ -22,9 +22,9 @@
       padding: 15px;
       background-color: #000;
       border-bottom: 2px solid #222;
-      position: sticky;   /* ✅ keeps it visible while scrolling */
-      top: 0;             /* ✅ pin to top of the screen */
-      z-index: 100;       /* ✅ make sure it stays above content */
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     h1 {
@@ -39,14 +39,14 @@
       font-size: 14px;
     }
 
-    #copyBtn, #miscBtn {
+    #copyBtn, #miscBtn, #movieBtn {
       background-color: #005eff;
       color: white;
       cursor: pointer;
       transition: background 0.2s;
     }
 
-    #copyBtn:hover, #miscBtn:hover {
+    #copyBtn:hover, #miscBtn:hover, #movieBtn:hover {
       background-color: #0074ff;
     }
 
@@ -87,12 +87,12 @@
       cursor: pointer;
       transition: background 0.2s;
       text-align: center;
-      white-space: normal;       /* ✅ allow wrapping */
-      word-wrap: break-word;     /* ✅ break long names */
-      overflow-wrap: anywhere;   /* ✅ break even long words */
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
       line-height: 1.2;
       font-size: 14px;
-      width: 100%;               /* ✅ make each fill its grid cell */
+      width: 100%;
       box-sizing: border-box;
       min-height: 40px;
     }
@@ -107,7 +107,8 @@
   <div class="top-bar">
     <h1>Game Launcher</h1>
     <button id="copyBtn">Copy Link</button>
-    <button id="miscBtn">Proxy</button> <!-- ✅ new button -->
+    <button id="miscBtn">Proxy</button>
+    <button id="movieBtn">Movie Player</button> <!-- 🎬 new Movie Player button -->
     <label for="search"><strong>Search:</strong></label>
     <input type="text" id="search" placeholder="Type to search...">
   </div>
