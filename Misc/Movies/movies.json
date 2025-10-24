@@ -1,7 +1,17 @@
 [
   {
     "type": "movie",
-    "label": "Squid Game S01E01",
+    "label": "Squid Game - S01E01",
     "path": "Movies/Squid Game - S01E01.mp4"
+  },
+  {
+    "type": "movie",
+    "label": "Squid Game - S01E02",
+    "path": "Movies/Squid Game - S01E02.mp4"
+  },
+  {
+    "type": "movie",
+    "label": "Squid Game - S01E03",
+    "path": "Movies/Squid Game - S01E03.mp4"
   }
 ]

@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Folder to scan
-const MOVIES_DIR = path.join(__dirname, 'Movies');
+const MOVIES_DIR = path.join(__dirname, 'Misc/Movies');
 
 // Output file
 const OUTPUT = path.join(__dirname, 'movies.json');
