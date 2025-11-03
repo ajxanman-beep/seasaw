@@ -2,37 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Misc Page</title>
+  <title>Proxy Browser</title>
   <style>
     body {
-      margin: 0;
-      background-color: black;
-      color: white;
+      background-color: #000;
+      color: #fff;
       font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      text-align: center;
+      margin: 0;
+      padding: 0;
     }
 
     .top-bar {
-      background-color: #000;
-      padding: 10px;
-      text-align: center;
+      background: #000;
       border-bottom: 2px solid #222;
+      padding: 15px;
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      z-index: 100;
     }
 
-    iframe {
-      flex: 1;
-      width: 100%;
+    input[type="text"] {
+      width: 60%;
+      padding: 10px;
+      font-size: 16px;
       border: none;
+      border-radius: 4px;
+      background-color: #002bff;
+      color: white;
+      outline: none;
     }
 
     button {
+      padding: 10px 15px;
+      border: none;
       background-color: #005eff;
       color: white;
-      border: none;
       border-radius: 4px;
-      padding: 6px 10px;
       cursor: pointer;
       transition: background 0.2s;
     }
@@ -40,18 +50,60 @@
     button:hover {
       background-color: #0074ff;
     }
+
+    .content {
+      margin-top: 40px;
+    }
+
+    iframe {
+      width: 90%;
+      height: 80vh;
+      border: none;
+      border-radius: 8px;
+      background: #111;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
+
   <div class="top-bar">
-    <button onclick="window.location.href='../index.html'">← Back to Launcher</button>
-    <h2>Proxy</h2>
+    <input type="text" id="urlInput" placeholder="Enter a URL or search term..." />
+    <button id="goBtn">Go</button>
   </div>
 
-  <!-- ✅ Embed the external site -->
-  <iframe
-    src="https://demonzero.space/?utm_source=ubghub.org&utm_medium=referral&utm_campaign=ubghub.org"
-    allowfullscreen>
-  </iframe>
+  <div class="content">
+    <p id="status">Enter a URL or search term above to browse.</p>
+    <iframe id="proxyFrame" src=""></iframe>
+  </div>
+
+  <script>
+    const goBtn = document.getElementById('goBtn');
+    const input = document.getElementById('urlInput');
+    const frame = document.getElementById('proxyFrame');
+    const status = document.getElementById('status');
+
+    function normalizeURL(query) {
+      // If it's not a full URL, treat it as a search query
+      if (!query.startsWith('http://') && !query.startsWith('https://')) {
+        return 'https://www.google.com/search?q=' + encodeURIComponent(query);
+      }
+      return query;
+    }
+
+    goBtn.addEventListener('click', () => {
+      const query = input.value.trim();
+      if (!query) return;
+
+      const finalURL = normalizeURL(query);
+      frame.src = finalURL;
+      status.textContent = 'Now browsing: ' + finalURL;
+    });
+
+    // Press Enter to go
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') goBtn.click();
+    });
+  </script>
 </body>
 </html>
