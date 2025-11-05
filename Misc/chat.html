@@ -182,31 +182,41 @@
   });
 
   function loadMessages() {
-    // clear any previous listener before adding new ones
-    if (messagesRef) off(messagesRef);
+  // Clear any previous listeners before adding new ones
+  if (messagesRef) off(messagesRef);
 
-    chatBox.innerHTML = "";
-    messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
+  chatBox.innerHTML = "";
+  messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
 
-    onChildAdded(messagesRef, (snap) => {
-      const msg = snap.val();
-      const div = document.createElement("div");
-      div.innerHTML = `<strong>${msg.email}:</strong> ${msg.text}`;
-      if (msg.uid === auth.currentUser.uid) {
-        const del = document.createElement("span");
-        del.className = "delete-btn";
-        del.textContent = "[delete]";
-        del.onclick = () => remove(ref(db, "messages/" + snap.key));
-        div.appendChild(del);
-      }
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
+  // Keep a quick reference to message divs by key
+  const messageElements = {};
 
-    onChildRemoved(ref(db, "messages"), () => {
-      loadMessages();
-    });
-  }
+  onChildAdded(messagesRef, (snap) => {
+    const msg = snap.val();
+    const div = document.createElement("div");
+    div.id = "msg-" + snap.key;
+    div.innerHTML = `<strong>${msg.email}:</strong> ${msg.text}`;
+    if (msg.uid === auth.currentUser.uid) {
+      const del = document.createElement("span");
+      del.className = "delete-btn";
+      del.textContent = "[delete]";
+      del.onclick = () => remove(ref(db, "messages/" + snap.key));
+      div.appendChild(del);
+    }
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    messageElements[snap.key] = div;
+  });
+
+  // When a message is removed, just delete its element
+  onChildRemoved(ref(db, "messages"), (snap) => {
+    const key = snap.key;
+    if (messageElements[key]) {
+      messageElements[key].remove();
+      delete messageElements[key];
+    }
+  });
+}
 
   function clearMessages() {
     chatBox.innerHTML = "";
