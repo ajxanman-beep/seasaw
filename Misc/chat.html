@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Room (Invite Only)</title>
+  <title>Chat Room</title>
   <style>
     body {
       background: #121212;
@@ -15,114 +15,78 @@
       justify-content: center;
       height: 100vh;
       margin: 0;
-      text-align: center;
     }
-    h1 {
-      margin-bottom: 20px;
-    }
-    #chatContainer {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-    }
-    #chatBox {
+    #chatContainer, #authContainer {
       width: 90%;
       max-width: 600px;
-      height: 400px;
       background: #1f1f1f;
       border: 1px solid #333;
       border-radius: 10px;
+      padding: 20px;
+      display: none;
+    }
+    #chatBox {
+      height: 400px;
       overflow-y: auto;
+      border: 1px solid #333;
       padding: 10px;
-      scroll-behavior: smooth;
+      border-radius: 10px;
+      background: #222;
     }
     #inputArea {
       margin-top: 10px;
       display: flex;
       gap: 10px;
-      width: 90%;
-      max-width: 600px;
     }
-    #inputArea input {
-      flex: 1;
+    input, button {
       padding: 10px;
       border: none;
       border-radius: 5px;
     }
-    #inputArea button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      background: #0078ff;
-      color: white;
-      cursor: pointer;
-    }
-    p.message {
-      cursor: pointer;
-      margin: 5px 0;
-    }
-    p.message:hover {
-      text-decoration: underline;
-    }
-    #loginContainer, #inviteContainer {
-      background: #1f1f1f;
-      border-radius: 10px;
-      padding: 20px;
+    input {
+      flex: 1;
     }
     button {
       background: #0078ff;
-      border: none;
-      padding: 10px 20px;
       color: white;
-      border-radius: 5px;
       cursor: pointer;
-      margin-top: 10px;
     }
-    input {
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
-      width: 80%;
-      margin-top: 10px;
+    .delete-btn {
+      color: #ff4444;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.8em;
     }
   </style>
 </head>
 <body>
-  <h1>Secure Chat Room</h1>
-
-  <!-- Google Sign-in -->
-  <div id="loginContainer">
-    <p>Sign in with Google to access the chat.</p>
-    <button id="loginButton">Sign in with Google</button>
+  <div id="authContainer">
+    <h2>Sign In or Register</h2>
+    <input type="email" id="email" placeholder="Email"><br><br>
+    <input type="password" id="password" placeholder="Password"><br><br>
+    <input type="text" id="inviteCode" placeholder="Invite Code"><br><br>
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <p id="authError" style="color:red;"></p>
   </div>
 
-  <!-- Invite Code -->
-  <div id="inviteContainer" style="display:none;">
-    <p>Enter your invite code:</p>
-    <input id="inviteInput" placeholder="Enter code here">
-    <button id="inviteButton">Submit</button>
-  </div>
-
-  <!-- Chat UI -->
   <div id="chatContainer">
-    <div id="chatBox">
-      <p>Welcome to the chat!</p>
-    </div>
+    <h1>Chat Room</h1>
+    <div id="chatBox"></div>
     <div id="inputArea">
       <input id="messageInput" placeholder="Type a message...">
       <button id="sendButton">Send</button>
     </div>
+    <button id="logoutBtn" style="margin-top:10px;background:#ff4444;">Logout</button>
   </div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js"></script>
 
   <script>
-    // Your Firebase configuration (fixed)
+    // ----- Your Firebase config -----
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
       authDomain: "chat-or-somethig.firebaseapp.com",
@@ -135,99 +99,102 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const auth = firebase.auth();
+    const database = firebase.database();
 
-    const loginButton = document.getElementById("loginButton");
-    const loginContainer = document.getElementById("loginContainer");
-    const inviteContainer = document.getElementById("inviteContainer");
-    const inviteInput = document.getElementById("inviteInput");
-    const inviteButton = document.getElementById("inviteButton");
+    const INVITE_CODE = "12345"; // you can change this later
+
+    const authContainer = document.getElementById("authContainer");
     const chatContainer = document.getElementById("chatContainer");
     const chatBox = document.getElementById("chatBox");
-    const messageInput = document.getElementById("messageInput");
-    const sendButton = document.getElementById("sendButton");
+    const msgInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendButton");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    const INVITE_CODE = "ABC123"; // Change this if you want
-    let sessionId = null;
+    // Show login form first
+    authContainer.style.display = "block";
 
-    // Google Sign-in
-    loginButton.onclick = async () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
+    // Login / Register
+    document.getElementById("loginBtn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      const code = document.getElementById("inviteCode").value;
+      if (code !== INVITE_CODE) return showError("Invalid invite code.");
       try {
-        await auth.signInWithPopup(provider);
-      } catch (error) {
-        alert("Error signing in: " + error.message);
+        await auth.signInWithEmailAndPassword(email, pass);
+      } catch (err) {
+        showError(err.message);
       }
     };
 
-    // Auth state listener
+    document.getElementById("registerBtn").onclick = async () => {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      const code = document.getElementById("inviteCode").value;
+      if (code !== INVITE_CODE) return showError("Invalid invite code.");
+      try {
+        await auth.createUserWithEmailAndPassword(email, pass);
+      } catch (err) {
+        showError(err.message);
+      }
+    };
+
     auth.onAuthStateChanged(user => {
       if (user) {
-        loginContainer.style.display = "none";
-        inviteContainer.style.display = "block";
+        authContainer.style.display = "none";
+        chatContainer.style.display = "block";
+        loadMessages();
       } else {
-        loginContainer.style.display = "block";
-        inviteContainer.style.display = "none";
         chatContainer.style.display = "none";
+        authContainer.style.display = "block";
       }
     });
 
-    // Invite code verification
-    inviteButton.onclick = () => {
-      const code = inviteInput.value.trim();
-      if (code === INVITE_CODE) {
-        inviteContainer.style.display = "none";
-        chatContainer.style.display = "flex";
-        sessionId = auth.currentUser.uid;
-        loadChat();
-      } else {
-        alert("Invalid invite code!");
-      }
-    };
+    logoutBtn.onclick = () => auth.signOut();
 
-    function loadChat() {
-      function sendMessage() {
-        const name = auth.currentUser.displayName || "Anonymous";
-        const message = messageInput.value.trim();
-        if (!message) return;
+    function showError(msg) {
+      document.getElementById("authError").innerText = msg;
+    }
 
-        db.ref('messages').push({
-          name: name,
-          text: message,
-          timestamp: Date.now(),
-          senderId: sessionId
-        });
-        messageInput.value = "";
-      }
+    // --- Chat Functions ---
+    sendBtn.onclick = sendMessage;
+    msgInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") sendMessage();
+    });
 
-      sendButton.onclick = sendMessage;
-      messageInput.addEventListener("keypress", e => {
-        if (e.key === "Enter") sendMessage();
+    function sendMessage() {
+      const msg = msgInput.value.trim();
+      if (!msg) return;
+      const user = auth.currentUser;
+      database.ref("messages").push({
+        uid: user.uid,
+        email: user.email,
+        text: msg,
+        timestamp: Date.now()
       });
+      msgInput.value = "";
+    }
 
-      db.ref('messages').on('child_added', snapshot => {
-        const msg = snapshot.val();
-        const p = document.createElement("p");
-        p.classList.add("message");
-        p.dataset.key = snapshot.key;
-        p.dataset.sender = msg.senderId;
-        const time = new Date(msg.timestamp).toLocaleTimeString();
-        p.innerHTML = `<strong>${msg.name}</strong> [${time}]: ${msg.text}`;
-        chatBox.appendChild(p);
+    function loadMessages() {
+      chatBox.innerHTML = "";
+      const ref = database.ref("messages").orderByChild("timestamp");
+      ref.on("child_added", snap => {
+        const msg = snap.val();
+        const div = document.createElement("div");
+        div.innerHTML = `<strong>${msg.email}:</strong> ${msg.text}`;
+        if (msg.uid === auth.currentUser.uid) {
+          const del = document.createElement("span");
+          del.className = "delete-btn";
+          del.textContent = "[delete]";
+          del.onclick = () => database.ref("messages/" + snap.key).remove();
+          div.appendChild(del);
+        }
+        chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
       });
 
-      chatBox.addEventListener("click", e => {
-        const target = e.target.closest("p.message");
-        if (!target) return;
-        if (target.dataset.sender !== sessionId) return;
-        db.ref("messages/" + target.dataset.key).remove();
-      });
-
-      db.ref("messages").on("child_removed", snapshot => {
-        const msgElem = chatBox.querySelector(`p[data-key="${snapshot.key}"]`);
-        if (msgElem) msgElem.remove();
+      ref.on("child_removed", snap => {
+        loadMessages();
       });
     }
   </script>
