@@ -81,119 +81,137 @@
   </div>
 
   <!-- Use type="module" for Firebase v10+ -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-    import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove, query, orderByChild } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+  import { 
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, signOut 
+  } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+  import { 
+    getDatabase, ref, push, onChildAdded, onChildRemoved, 
+    remove, query, orderByChild, off 
+  } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
-      authDomain: "chat-or-somethig.firebaseapp.com",
-      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
-      projectId: "chat-or-somethig",
-      storageBucket: "chat-or-somethig.appspot.com",
-      messagingSenderId: "598777875087",
-      appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
-      measurementId: "G-VQQ0TYRNNH"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+    authDomain: "chat-or-somethig.firebaseapp.com",
+    databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+    projectId: "chat-or-somethig",
+    storageBucket: "chat-or-somethig.appspot.com",
+    messagingSenderId: "598777875087",
+    appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
+    measurementId: "G-VQQ0TYRNNH"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
 
-    const INVITE_CODE = "12345"; // Change this anytime
+  const INVITE_CODE = "12345"; // change this later if you want
 
-    const authContainer = document.getElementById("authContainer");
-    const chatContainer = document.getElementById("chatContainer");
-    const chatBox = document.getElementById("chatBox");
-    const msgInput = document.getElementById("messageInput");
-    const sendBtn = document.getElementById("sendButton");
-    const logoutBtn = document.getElementById("logoutBtn");
+  const authContainer = document.getElementById("authContainer");
+  const chatContainer = document.getElementById("chatContainer");
+  const chatBox = document.getElementById("chatBox");
+  const msgInput = document.getElementById("messageInput");
+  const sendBtn = document.getElementById("sendButton");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-    // Show login screen first
-    authContainer.style.display = "block";
+  let messagesRef = null;
 
-    document.getElementById("loginBtn").onclick = async () => {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      const code = document.getElementById("inviteCode").value;
-      if (code !== INVITE_CODE) return showError("Invalid invite code.");
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-      } catch (err) {
-        showError(err.message);
+  // Show login screen initially
+  authContainer.style.display = "block";
+
+  document.getElementById("loginBtn").onclick = async () => {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+    const code = document.getElementById("inviteCode").value;
+    if (code !== INVITE_CODE) return showError("Invalid invite code.");
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (err) {
+      showError(err.message);
+    }
+  };
+
+  document.getElementById("registerBtn").onclick = async () => {
+    const email = document.getElementById("email").value;
+    const pass = document.getElementById("password").value;
+    const code = document.getElementById("inviteCode").value;
+    if (code !== INVITE_CODE) return showError("Invalid invite code.");
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    } catch (err) {
+      showError(err.message);
+    }
+  };
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      authContainer.style.display = "none";
+      chatContainer.style.display = "block";
+      loadMessages(); // only runs once per login
+    } else {
+      chatContainer.style.display = "none";
+      authContainer.style.display = "block";
+      clearMessages(); // stop listeners when user logs out
+    }
+  });
+
+  logoutBtn.onclick = () => signOut(auth);
+
+  function showError(msg) {
+    document.getElementById("authError").innerText = msg;
+  }
+
+  function sendMessage() {
+    const msg = msgInput.value.trim();
+    if (!msg) return;
+    const user = auth.currentUser;
+    push(ref(db, "messages"), {
+      uid: user.uid,
+      email: user.email,
+      text: msg,
+      timestamp: Date.now()
+    });
+    msgInput.value = "";
+  }
+
+  sendBtn.onclick = sendMessage;
+  msgInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") sendMessage();
+  });
+
+  function loadMessages() {
+    // clear any previous listener before adding new ones
+    if (messagesRef) off(messagesRef);
+
+    chatBox.innerHTML = "";
+    messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
+
+    onChildAdded(messagesRef, (snap) => {
+      const msg = snap.val();
+      const div = document.createElement("div");
+      div.innerHTML = `<strong>${msg.email}:</strong> ${msg.text}`;
+      if (msg.uid === auth.currentUser.uid) {
+        const del = document.createElement("span");
+        del.className = "delete-btn";
+        del.textContent = "[delete]";
+        del.onclick = () => remove(ref(db, "messages/" + snap.key));
+        div.appendChild(del);
       }
-    };
-
-    document.getElementById("registerBtn").onclick = async () => {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      const code = document.getElementById("inviteCode").value;
-      if (code !== INVITE_CODE) return showError("Invalid invite code.");
-      try {
-        await createUserWithEmailAndPassword(auth, email, pass);
-      } catch (err) {
-        showError(err.message);
-      }
-    };
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        authContainer.style.display = "none";
-        chatContainer.style.display = "block";
-        loadMessages();
-      } else {
-        chatContainer.style.display = "none";
-        authContainer.style.display = "block";
-      }
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     });
 
-    logoutBtn.onclick = () => signOut(auth);
-
-    function showError(msg) {
-      document.getElementById("authError").innerText = msg;
-    }
-
-    function sendMessage() {
-      const msg = msgInput.value.trim();
-      if (!msg) return;
-      const user = auth.currentUser;
-      push(ref(db, "messages"), {
-        uid: user.uid,
-        email: user.email,
-        text: msg,
-        timestamp: Date.now()
-      });
-      msgInput.value = "";
-    }
-
-    sendBtn.onclick = sendMessage;
-    msgInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") sendMessage();
+    onChildRemoved(ref(db, "messages"), () => {
+      loadMessages();
     });
+  }
 
-    function loadMessages() {
-      chatBox.innerHTML = "";
-      const messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
-      onChildAdded(messagesRef, (snap) => {
-        const msg = snap.val();
-        const div = document.createElement("div");
-        div.innerHTML = `<strong>${msg.email}:</strong> ${msg.text}`;
-        if (msg.uid === auth.currentUser.uid) {
-          const del = document.createElement("span");
-          del.className = "delete-btn";
-          del.textContent = "[delete]";
-          del.onclick = () => remove(ref(db, "messages/" + snap.key));
-          div.appendChild(del);
-        }
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
-      });
-
-      onChildRemoved(ref(db, "messages"), () => {
-        loadMessages();
-      });
-    }
-  </script>
+  function clearMessages() {
+    chatBox.innerHTML = "";
+    if (messagesRef) off(messagesRef);
+  }
+</script>
 </body>
 </html>
