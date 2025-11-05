@@ -1,3 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Room</title>
+  <style>
+    body {
+      background: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #chatContainer, #authContainer, #inviteContainer {
+      width: 90%;
+      max-width: 600px;
+      background: #1f1f1f;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 20px;
+      display: none;
+    }
+    #chatBox {
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      padding: 10px;
+      border-radius: 10px;
+      background: #222;
+    }
+    #inputArea {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    input, button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+    input {
+      flex: 1;
+    }
+    button {
+      background: #0078ff;
+      color: white;
+      cursor: pointer;
+    }
+    .delete-btn {
+      color: #ff4444;
+      cursor: pointer;
+      margin-left: 10px;
+      font-size: 0.8em;
+    }
+  </style>
+</head>
+<body>
+  <div id="authContainer">
+    <h2>Sign In or Register</h2>
+    <input type="email" id="email" placeholder="Email"><br><br>
+    <input type="password" id="password" placeholder="Password"><br><br>
+    <input type="text" id="inviteCode" placeholder="Invite Code"><br><br>
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <p id="authError" style="color:red;"></p>
+  </div>
+
+  <div id="chatContainer">
+    <h1>Chat Room</h1>
+    <div id="chatBox"></div>
+    <div id="inputArea">
+      <input id="messageInput" placeholder="Type a message...">
+      <button id="sendButton">Send</button>
+    </div>
+    <button id="logoutBtn" style="margin-top:10px;background:#ff4444;">Logout</button>
+    <h3>Your Invite Codes (max 6):</h3>
+    <div id="inviteList"></div>
+    <button id="generateInviteBtn">Generate Invite Code</button>
+  </div>
+
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove, query, orderByChild, off, get } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
@@ -180,3 +266,6 @@ generateInviteBtn.onclick = async () => {
 function updateInviteList(codes) {
   inviteList.innerHTML = codes.map(c => `<div>${c}</div>`).join("");
 }
+</script>
+</body>
+</html>
