@@ -147,6 +147,7 @@
     };
 
     // --- Register ---
+    // --- Register ---
     document.getElementById("registerBtn").onclick = async () => {
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
@@ -161,20 +162,21 @@
       if (snap.val().used) return showError("Invite code already used.");
 
       try {
+        // Mark invite code as used first
+        await set(codeRef, { ...snap.val(), used: true });
+
+        // Then create the user
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
+
         const nick = prompt("Choose a nickname:");
         const userRef = ref(db, "users/" + cred.user.uid);
         await set(userRef, { nickname: nick || "Anonymous" });
-
-        // Mark invite code as used
-        await set(child(db, "inviteCodes/" + code + "/used"), true);
 
         showError("");
       } catch (err) {
         showError(err.message);
       }
     };
-
     // --- Auth State ---
     onAuthStateChanged(auth, async (user) => {
       if (user) {
