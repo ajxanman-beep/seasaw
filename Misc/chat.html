@@ -86,13 +86,11 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove, query, orderByChild, off, get } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
   authDomain: "chat-or-somethig.firebaseapp.com",
-  databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
   projectId: "chat-or-somethig",
   storageBucket: "chat-or-somethig.appspot.com",
   messagingSenderId: "598777875087",
@@ -102,8 +100,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const dbRT = getDatabase(app); // Real-time DB for chat
-const dbFS = getFirestore(app); // Firestore for invite codes/users
+const db = getFirestore(app);
 
 const authContainer = document.getElementById("authContainer");
 const chatContainer = document.getElementById("chatContainer");
@@ -122,18 +119,17 @@ function generateCode() {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
-// --- Login ---
+// --- Login & Register ---
 document.getElementById("loginBtn").onclick = async () => {
   const email = document.getElementById("email").value;
   const pass = document.getElementById("password").value;
   const code = document.getElementById("inviteCode").value.trim();
 
   try {
-    const codeDoc = await getDoc(doc(dbFS, "inviteCodes", code));
+    // Check invite code exists and not used
+    const codeDoc = await getDoc(doc(db, "inviteCodes", code));
     if (!codeDoc.exists()) return showError("Invalid invite code.");
-    // Optional: allow login even if used by current user
-    if (codeDoc.data().usedBy && codeDoc.data().usedBy !== auth.currentUser?.uid)
-      return showError("Code already used!");
+    if (codeDoc.data().usedBy && codeDoc.data().usedBy !== auth.currentUser?.uid) return showError("Code already used!");
 
     await signInWithEmailAndPassword(auth, email, pass);
   } catch (err) {
@@ -141,33 +137,29 @@ document.getElementById("loginBtn").onclick = async () => {
   }
 };
 
-// --- Register ---
 document.getElementById("registerBtn").onclick = async () => {
   const email = document.getElementById("email").value;
   const pass = document.getElementById("password").value;
   const code = document.getElementById("inviteCode").value.trim();
-
   try {
-    const codeDoc = await getDoc(doc(dbFS, "inviteCodes", code));
+    const codeDoc = await getDoc(doc(db, "inviteCodes", code));
     if (!codeDoc.exists()) return showError("Invalid invite code.");
     if (codeDoc.data().usedBy) return showError("Code already used!");
 
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     const uid = cred.user.uid;
-
     const nick = prompt("Choose a nickname:") || "Anonymous";
     currentNickname = nick;
 
-    // Create user document in Firestore
-    await setDoc(doc(dbFS, "users", uid), {
+    // Create user document
+    await setDoc(doc(db, "users", uid), {
       nickname: nick,
       generatedCodes: [],
       usedCode: code
     });
 
     // Mark invite code as used
-    await updateDoc(doc(dbFS, "inviteCodes", code), { usedBy: uid });
-
+    await updateDoc(doc(db, "inviteCodes", code), { usedBy: uid });
   } catch (err) {
     showError(err.message);
   }
@@ -179,7 +171,8 @@ onAuthStateChanged(auth, async (user) => {
     chatContainer.style.display = "block";
 
     // Load user info
-    const snap = await getDoc(doc(dbFS, "users", user.uid));
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
     if (snap.exists()) {
       currentNickname = snap.data().nickname || "Anonymous";
       updateInviteList(snap.data().generatedCodes || []);
@@ -196,12 +189,11 @@ onAuthStateChanged(auth, async (user) => {
 logoutBtn.onclick = () => signOut(auth);
 function showError(msg) { document.getElementById("authError").innerText = msg; }
 
-// --- Chat functions (Realtime Database) ---
 function sendMessage() {
   const msg = msgInput.value.trim();
   if (!msg) return;
   const user = auth.currentUser;
-  push(ref(dbRT, "messages"), {
+  addDoc(collection(db, "messages"), {
     uid: user.uid,
     nickname: currentNickname,
     text: msg,
@@ -209,54 +201,52 @@ function sendMessage() {
   });
   msgInput.value = "";
 }
-
 sendBtn.onclick = sendMessage;
 msgInput.addEventListener("keypress", e => { if(e.key==="Enter") sendMessage(); });
 
+// Load messages
 function loadMessages() {
-  if (messagesRef) off(messagesRef);
   chatBox.innerHTML = "";
-  messagesRef = query(ref(dbRT, "messages"), orderByChild("timestamp"));
+  messagesRef = query(collection(db, "messages"));
 
   const messageElements = {};
-  onChildAdded(messagesRef, (snap) => {
-    const msg = snap.val();
-    const div = document.createElement("div");
-    div.id = "msg-" + snap.key;
-    div.innerHTML = `<strong>${msg.nickname || "Anonymous"}:</strong> ${msg.text}`;
-    if (msg.uid === auth.currentUser.uid) {
-      const del = document.createElement("span");
-      del.className = "delete-btn";
-      del.textContent = "[delete]";
-      del.onclick = () => remove(ref(dbRT, "messages/" + snap.key));
-      div.appendChild(del);
-    }
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-    messageElements[snap.key] = div;
-  });
-
-  onChildRemoved(ref(dbRT, "messages"), (snap) => {
-    const key = snap.key;
-    if (messageElements[key]) {
-      messageElements[key].remove();
-      delete messageElements[key];
-    }
+  const unsubscribe = onSnapshot(messagesRef, (snapshot) => {
+    snapshot.docChanges().forEach(change => {
+      const msg = change.doc.data();
+      if (change.type === "added") {
+        const div = document.createElement("div");
+        div.id = "msg-" + change.doc.id;
+        div.innerHTML = `<strong>${msg.nickname}:</strong> ${msg.text}`;
+        if (msg.uid === auth.currentUser.uid) {
+          const del = document.createElement("span");
+          del.className = "delete-btn";
+          del.textContent = "[delete]";
+          del.onclick = async () => { await deleteDoc(doc(db, "messages", change.doc.id)); };
+          div.appendChild(del);
+        }
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        messageElements[change.doc.id] = div;
+      }
+      if (change.type === "removed") {
+        if (messageElements[change.doc.id]) messageElements[change.doc.id].remove();
+      }
+    });
   });
 }
 
 function clearMessages() { chatBox.innerHTML = ""; }
 
-// --- Invite code generation ---
+// --- Invite Code Generation ---
 generateInviteBtn.onclick = async () => {
   const user = auth.currentUser;
-  const userRef = doc(dbFS, "users", user.uid);
+  const userRef = doc(db, "users", user.uid);
   const snap = await getDoc(userRef);
   const codes = snap.data().generatedCodes || [];
   if (codes.length >= 6) return alert("You can only generate 6 invite codes!");
 
   const newCode = generateCode();
-  await setDoc(doc(dbFS, "inviteCodes", newCode), { createdBy: user.uid, usedBy: null });
+  await setDoc(doc(db, "inviteCodes", newCode), { createdBy: user.uid, usedBy: null });
   codes.push(newCode);
   await updateDoc(userRef, { generatedCodes: codes });
 
