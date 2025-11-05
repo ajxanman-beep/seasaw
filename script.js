@@ -10,6 +10,11 @@ document.getElementById('miscBtn').addEventListener('click', () => {
   window.location.href = 'Misc/Proxy.html';
 });
 
+// ✅ Open Chat page
+document.getElementById('chatBtn').addEventListener('click', () => {
+  window.location.href = 'Misc/chat.html';
+});
+
 // ✅ Open Movie Player page
 document.getElementById('movieBtn').addEventListener('click', () => {
   window.location.href = 'Misc/MoviePlayer.html';
