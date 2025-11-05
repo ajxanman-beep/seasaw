@@ -13,5 +13,10 @@
     "type": "movie",
     "label": "Squid Game - S01E03",
     "path": "Movies/Squid Game - S01E03.mp4"
+  },
+  {
+    "type": "movie",
+    "label": "test",
+    "path": "Movies/A"
   }
 ]
