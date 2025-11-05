@@ -258,20 +258,20 @@
 
       if (codes.length >= 6) return alert("You can only create 6 invite codes.");
 
+      // Generate random code
       const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      // Save globally
       await set(ref(db, "inviteCodes/" + newCode), { used: false, creator: user.uid });
-      await set(ref(db, "users/" + user.uid + "/inviteCodes/" + newCode), true);
+
+      // Save under user with more info
+      await set(ref(db, `users/${user.uid}/inviteCodes/${newCode}`), {
+        used: false,
+        createdAt: Date.now()
+      });
+
       displayMyCodes();
     };
-
-    function displayMyCodes() {
-      const user = auth.currentUser;
-      get(ref(db, "users/" + user.uid + "/inviteCodes")).then(snap => {
-        const codes = snap.exists() ? Object.keys(snap.val()) : [];
-        myCodesDiv.innerHTML = "Your codes: " + codes.join(", ");
-      });
-    }
-
   </script>
 </body>
 </html>
