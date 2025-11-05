@@ -63,19 +63,56 @@
     <button id="sendButton">Send</button>
   </div>
 
-  <script>
-    document.getElementById("sendButton").onclick = () => {
-      const name = document.getElementById("username").value || "Anonymous";
-      const msg = document.getElementById("messageInput").value.trim();
-      if (!msg) return;
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-      const chatBox = document.getElementById("chatBox");
+  <script>
+    // ----- Your Firebase config -----
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+      authDomain: "chat-or-somethig.firebaseapp.com",
+      projectId: "chat-or-somethig",
+      storageBucket: "chat-or-somethig.firebasestorage.app",
+      messagingSenderId: "598777875087",
+      appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
+      measurementId: "G-VQQ0TYRNNH"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const chatBox = document.getElementById("chatBox");
+    const usernameInput = document.getElementById("username");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+
+    // Send message to Firebase
+    sendButton.onclick = () => {
+      const name = usernameInput.value || "Anonymous";
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      db.ref('messages').push({
+        name: name,
+        text: message,
+        timestamp: Date.now()
+      });
+
+      messageInput.value = "";
+    };
+
+    // Listen for new messages
+    db.ref('messages').on('child_added', snapshot => {
+      const msg = snapshot.val();
       const p = document.createElement("p");
-      p.innerHTML = `<strong>${name}:</strong> ${msg}`;
+      const time = new Date(msg.timestamp).toLocaleTimeString();
+      p.innerHTML = `<strong>${msg.name}</strong> [${time}]: ${msg.text}`;
       chatBox.appendChild(p);
       chatBox.scrollTop = chatBox.scrollHeight;
-      document.getElementById("messageInput").value = "";
-    };
+    });
   </script>
 </body>
 </html>
