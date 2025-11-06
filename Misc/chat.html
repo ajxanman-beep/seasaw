@@ -61,9 +61,14 @@
       margin-top: 10px;
       background: #00cc66;
     }
+    #viewCodesBtn {
+      margin-top: 10px;
+      background: #ffaa00;
+    }
     #myCodes {
       margin-top: 5px;
       word-break: break-all;
+      display: none;
     }
   </style>
 </head>
@@ -88,6 +93,7 @@
       <button id="sendButton">Send</button>
     </div>
     <button id="generateInviteBtn">Generate Invite Code</button>
+    <button id="viewCodesBtn">View Invite Codes</button>
     <div id="myCodes"></div>
     <button id="logoutBtn" style="margin-top:10px;background:#ff4444;">Logout</button>
   </div>
@@ -125,6 +131,7 @@
     const sendBtn = document.getElementById("sendButton");
     const logoutBtn = document.getElementById("logoutBtn");
     const generateBtn = document.getElementById("generateInviteBtn");
+    const viewBtn = document.getElementById("viewCodesBtn");
     const myCodesDiv = document.getElementById("myCodes");
 
     let messagesRef = null;
@@ -192,7 +199,6 @@
         if (snap.exists()) currentNickname = snap.val().nickname || "Anonymous";
 
         loadMessages();
-        displayMyCodes(); // show codes after login
       } else {
         chatContainer.style.display = "none";
         authContainer.style.display = "block";
@@ -259,19 +265,27 @@
 
       if (codes.length >= 6) return alert("You can only create 6 invite codes.");
 
-      // Generate random code
       const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // Save globally
       await set(ref(db, "inviteCodes/" + newCode), { used: false, creator: user.uid });
-
-      // Save under user with info
       await set(ref(db, `users/${user.uid}/inviteCodes/${newCode}`), {
         used: false,
         createdAt: Date.now()
       });
 
-      displayMyCodes();
+      alert("New invite code generated! Click 'View Invite Codes' to see it.");
+    };
+
+    // --- View/Hide Invite Codes ---
+    viewBtn.onclick = () => {
+      if (myCodesDiv.style.display === "none") {
+        displayMyCodes();
+        myCodesDiv.style.display = "block";
+        viewBtn.textContent = "Hide Invite Codes";
+      } else {
+        myCodesDiv.style.display = "none";
+        viewBtn.textContent = "View Invite Codes";
+      }
     };
 
     function displayMyCodes() {
