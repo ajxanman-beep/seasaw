@@ -228,13 +228,19 @@ function loadMessages(){
     const formattedHour = ((hours+11)%12+1);
     const timeStr = `${formattedHour}:${minutes} ${ampm}`;
 
+    const ADMIN_EMAILS = [
+      "aj.xanman@gmail.com",
+      "alexa_pears736@ahschools.us"
+    ];
+
+
     let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
     if(msg.text) content += msg.text + " ";
     if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
 
     div.innerHTML = content;
 
-    if(msg.uid === auth.currentUser.uid){
+    if (msg.uid === auth.currentUser.uid || ADMIN_EMAILS.includes(auth.currentUser.email)) {
       const del = document.createElement("span");
       del.className = "delete-btn";
       del.textContent = "[delete]";
