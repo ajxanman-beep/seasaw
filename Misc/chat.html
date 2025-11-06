@@ -221,30 +221,44 @@ function loadMessages(){
   messagesRef=query(ref(db,"messages"),orderByChild("timestamp"));
   const messageElements={};
 
-  onChildAdded(messagesRef,snap=>{
-    const msg=snap.val();
-    const div=document.createElement("div");
-    div.id="msg-"+snap.key;
-    let content=`<strong>${msg.nickname||"Anonymous"}:</strong> `;
-    if(msg.text) content+=msg.text+" ";
-    if(msg.imageUrl) content+=`<br><img class="chat-img" src="${msg.imageUrl}">`;
-    div.innerHTML=content;
-    if(msg.uid===auth.currentUser.uid){
-      const del=document.createElement("span");
-      del.className="delete-btn";
-      del.textContent="[delete]";
-      del.onclick=()=>remove(ref(db,"messages/"+snap.key));
-      div.appendChild(del);
-    }
-    chatBox.appendChild(div);
-    chatBox.scrollTop=chatBox.scrollHeight;
+  onChildAdded(messagesRef, snap => {
+  const msg = snap.val();
+  const div = document.createElement("div");
+  div.id = "msg-" + snap.key;
 
-    // Add click listener for image
-    const img = div.querySelector(".chat-img");
-    if(img) img.onclick = ()=>{
-      modalImg.src = img.src;
-      imgModal.style.display="flex";
-    };
+  // Format timestamp
+  const date = new Date(msg.timestamp);
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const formattedHour = ((hours + 11) % 12 + 1); // convert 0-23 to 1-12
+  const timeStr = `${formattedHour}:${minutes} ${ampm}`;
+
+  let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
+  if(msg.text) content += msg.text + " ";
+  if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
+
+  div.innerHTML = content;
+
+  if(msg.uid === auth.currentUser.uid){
+    const del = document.createElement("span");
+    del.className = "delete-btn";
+    del.textContent = "[delete]";
+    del.onclick = () => remove(ref(db, "messages/" + snap.key));
+    div.appendChild(del);
+  }
+
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // Add click listener for image
+  const img = div.querySelector(".chat-img");
+  if(img) img.onclick = () => {
+    modalImg.src = img.src;
+    imgModal.style.display = "flex";
+  };
+});
+
 
     messageElements[snap.key]=div;
   });
