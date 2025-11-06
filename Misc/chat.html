@@ -183,12 +183,14 @@ function sendMessage(text,imageUrl=""){
   if(!text&&!imageUrl) return;
   const user=auth.currentUser;
   push(ref(db,"messages"),{
-    uid:user.uid,
-    nickname:currentNickname,
-    text:text,
-    imageUrl:imageUrl,
-    timestamp:Date.now()
+    uid: user.uid,
+    email: user.email, // 👈 Add this line
+    nickname: currentNickname,
+    text: text,
+    imageUrl: imageUrl,
+    timestamp: Date.now()
   });
+
   msgInput.value="";
 }
 
