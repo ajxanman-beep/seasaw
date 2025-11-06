@@ -126,13 +126,10 @@
     const CLOUD_NAME = "dcbo4oozo";
     const UPLOAD_PRESET = "z1d4s4al";
 
-    // Admins with special permissions
-    const ADMINS = [
-      "admin@gmail.com", 
-      "alexander@example.com"
-    ];
+    // Admins that can delete any message
+    const ADMINS = ["admin@gmail.com"];
 
-    // Email emoji suffixes
+    // 💬 Email emoji suffixes
     const EMAIL_EMOJIS = {
       "admin@gmail.com": "👑",
       "alexander@example.com": "⚡"
@@ -151,16 +148,10 @@
     let messagesRef = null;
     let currentNickname = "Unknown";
 
-    // Auth buttons
     document.getElementById("loginBtn").onclick = async () => {
-      const emailInput = document.getElementById("email");
-      const passInput = document.getElementById("password");
-      const codeInput = document.getElementById("inviteCode");
-
-      const email = emailInput.value.trim();
-      const pass = passInput.value.trim();
-      const code = codeInput.value.trim();
-
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      const code = document.getElementById("inviteCode").value;
       if (!email || !pass) return showError("Please enter email and password.");
       try {
         await signInWithEmailAndPassword(auth, email, pass);
@@ -170,26 +161,16 @@
     };
 
     document.getElementById("registerBtn").onclick = async () => {
-      const emailInput = document.getElementById("email");
-      const passInput = document.getElementById("password");
-      const codeInput = document.getElementById("inviteCode");
-
-      const email = emailInput.value.trim();
-      const pass = passInput.value.trim();
-      const code = codeInput.value.trim();
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      const code = document.getElementById("inviteCode").value;
 
       if (!email || !pass) return showError("Please enter email and password.");
       if (!code) return showError("Please enter an invite code.");
 
-      // Verify invite code
       const inviteRef = ref(db, "invites/" + code);
       const inviteSnap = await get(inviteRef);
       if (!inviteSnap.exists()) return showError("Invalid invite code.");
-
-      const inviterUid = inviteSnap.val().creator;
-      if (!inviterUid) return showError("Invite code error.");
-
-      // Use it and remove it
       await remove(inviteRef);
 
       try {
@@ -197,7 +178,6 @@
         const nick = prompt("Choose a nickname:");
         await set(ref(db, "users/" + cred.user.uid), { nickname: nick || "Anonymous" });
 
-        // Generate 6 codes for this user
         for (let i = 0; i < 6; i++) {
           const newCode = Math.random().toString(36).substring(2, 8);
           await set(ref(db, "invites/" + newCode), { creator: cred.user.uid });
@@ -313,7 +293,6 @@
         const div = document.createElement("div");
         div.id = "msg-" + snap.key;
 
-        // nickname + emoji suffix
         let displayName = msg.nickname || "Anonymous";
         if (EMAIL_EMOJIS[msg.email]) {
           displayName += " " + EMAIL_EMOJIS[msg.email];
