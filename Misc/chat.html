@@ -1,341 +1,301 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat Room</title>
-  <style>
-    body {
-      background: #121212;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    #chatContainer, #authContainer {
-      width: 90%;
-      max-width: 600px;
-      background: #1f1f1f;
-      border: 1px solid #333;
-      border-radius: 10px;
-      padding: 20px;
-      display: none;
-    }
-    #chatBox {
-      height: 400px;
-      overflow-y: auto;
-      border: 1px solid #333;
-      padding: 10px;
-      border-radius: 10px;
-      background: #222;
-    }
-    #inputArea {
-      margin-top: 10px;
-      display: flex;
-      gap: 10px;
-    }
-    input, button {
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
-    }
-    input {
-      flex: 1;
-    }
-    button {
-      background: #0078ff;
-      color: white;
-      cursor: pointer;
-    }
-    .delete-btn {
-      color: #ff4444;
-      cursor: pointer;
-      margin-left: 10px;
-      font-size: 0.8em;
-    }
-    img.chat-image {
-      max-width: 200px;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 5px;
-    }
-    #logoutBtn {
-      margin-top: 10px;
-      background: #ff4444;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chat Room</title>
+<style>
+  body {
+    background: #121212;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  #chatContainer, #authContainer {
+    width: 90%;
+    max-width: 600px;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 20px;
+    display: none;
+  }
+  #chatBox {
+    height: 400px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 10px;
+    background: #222;
+  }
+  #inputArea {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+  input, button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+  }
+  input[type="file"] { flex: none; }
+  input[type="text"], input[type="email"], input[type="password"] { flex: 1; }
+  button { background: #0078ff; color: white; cursor: pointer; }
+  .delete-btn {
+    color: #ff4444;
+    cursor: pointer;
+    margin-left: 10px;
+    font-size: 0.8em;
+  }
+  #generateInviteBtn { background: #00cc66; margin-top:10px; }
+  #viewCodesBtn { background: #ffaa00; margin-top:10px; }
+  #myCodes { margin-top: 5px; word-break: break-all; display: none; }
+  img.chat-img { border-radius: 5px; max-width: 200px; max-height: 200px; display:block; margin-top:5px; cursor:pointer; }
+  #imgModal {
+    display:none;
+    position:fixed;
+    z-index:1000;
+    left:0; top:0;
+    width:100%; height:100%;
+    background: rgba(0,0,0,0.9);
+    justify-content:center;
+    align-items:center;
+  }
+  #imgModal img { max-width:90%; max-height:90%; border-radius:5px; }
+</style>
 </head>
 <body>
-  <div id="authContainer">
-    <h2>Sign In or Register</h2>
-    <input type="email" id="email" placeholder="Email"><br><br>
-    <input type="password" id="password" placeholder="Password"><br><br>
-    <input type="text" id="inviteCode" placeholder="Invite Code"><br><br>
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
-    <p id="authError" style="color:red;"></p>
+
+<div id="authContainer">
+  <h2>Sign In or Register</h2>
+  <input type="email" id="email" placeholder="Email"><br><br>
+  <input type="password" id="password" placeholder="Password"><br><br>
+  <input type="text" id="inviteCode" placeholder="Invite Code"><br><br>
+  <button id="loginBtn">Login</button>
+  <button id="registerBtn">Register</button>
+  <p id="authError" style="color:red;"></p>
+</div>
+
+<div id="chatContainer">
+  <h1>Chat Room</h1>
+  <div id="chatBox"></div>
+  <div id="inputArea">
+    <input id="messageInput" type="text" placeholder="Type a message...">
+    <input id="fileInput" type="file" accept="image/*,video/gif">
+    <button id="sendButton">Send</button>
   </div>
+  <button id="generateInviteBtn">Generate Invite Code</button>
+  <button id="viewCodesBtn">View Invite Codes</button>
+  <div id="myCodes"></div>
+  <button id="logoutBtn" style="margin-top:10px;background:#ff4444;">Logout</button>
+</div>
 
-  <div id="chatContainer">
-    <h1>Chat Room</h1>
-    <button id="viewCodesBtn">View Invite Codes</button>
-    <div id="inviteCodesList" style="display:none;margin-bottom:10px;"></div>
-    <div id="chatBox"></div>
+<div id="imgModal">
+  <img id="modalImg" src="">
+</div>
 
-    <div id="inputArea">
-      <input id="messageInput" placeholder="Type a message...">
-      <input type="file" id="fileInput" accept="image/*,image/gif">
-      <button id="sendButton">Send</button>
-    </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove, query, orderByChild, off, set, get } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
-    <button id="logoutBtn">Logout</button>
-  </div>
+const firebaseConfig = {
+  apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+  authDomain: "chat-or-somethig.firebaseapp.com",
+  databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+  projectId: "chat-or-somethig",
+  storageBucket: "chat-or-somethig.appspot.com",
+  messagingSenderId: "598777875087",
+  appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
+  measurementId: "G-VQQ0TYRNNH"
+};
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { 
-      getAuth, onAuthStateChanged, signInWithEmailAndPassword, 
-      createUserWithEmailAndPassword, signOut 
-    } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-    import { 
-      getDatabase, ref, push, onChildAdded, onChildRemoved, 
-      remove, query, orderByChild, off, set, get 
-    } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-    // Firebase setup
-    const firebaseConfig = {
-      apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
-      authDomain: "chat-or-somethig.firebaseapp.com",
-      databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
-      projectId: "chat-or-somethig",
-      storageBucket: "chat-or-somethig.appspot.com",
-      messagingSenderId: "598777875087",
-      appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
-      measurementId: "G-VQQ0TYRNNH"
-    };
+const authContainer = document.getElementById("authContainer");
+const chatContainer = document.getElementById("chatContainer");
+const chatBox = document.getElementById("chatBox");
+const msgInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendButton");
+const logoutBtn = document.getElementById("logoutBtn");
+const generateBtn = document.getElementById("generateInviteBtn");
+const viewBtn = document.getElementById("viewCodesBtn");
+const myCodesDiv = document.getElementById("myCodes");
+const fileInput = document.getElementById("fileInput");
+const imgModal = document.getElementById("imgModal");
+const modalImg = document.getElementById("modalImg");
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
+let messagesRef = null;
+let currentNickname = "Unknown";
 
-    // Cloudinary setup
-    const CLOUD_NAME = "dcbo4oozo";
-    const UPLOAD_PRESET = "z1d4s4al";
+function showError(msg){ document.getElementById("authError").innerText = msg; }
+function clearMessages(){ chatBox.innerHTML=""; if(messagesRef) off(messagesRef); }
 
-    // Admins that can delete any message
-    const ADMINS = ["admin@gmail.com"];
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
+  try{ await signInWithEmailAndPassword(auth,email,pass); }
+  catch(err){ showError(err.message); }
+};
 
-    // 💬 Email emoji suffixes
-    const EMAIL_EMOJIS = {
-      "admin@gmail.com": "👑",
-      "alexander@example.com": "⚡"
-    };
+document.getElementById("registerBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const pass = document.getElementById("password").value;
+  const code = document.getElementById("inviteCode").value.trim();
+  if(!code) return showError("Invite code required.");
+  const codeRef = ref(db,"inviteCodes/"+code);
+  const snap = await get(codeRef);
+  if(!snap.exists()) return showError("Invalid invite code.");
+  if(snap.val().used) return showError("Invite code already used.");
+  try{
+    await set(codeRef,{...snap.val(), used:true});
+    const cred = await createUserWithEmailAndPassword(auth,email,pass);
+    const nick = prompt("Choose a nickname:");
+    const userRef = ref(db,"users/"+cred.user.uid);
+    await set(userRef,{nickname:nick||"Anonymous"});
+    showError("");
+  }catch(err){ showError(err.message); }
+};
 
-    const authContainer = document.getElementById("authContainer");
-    const chatContainer = document.getElementById("chatContainer");
-    const chatBox = document.getElementById("chatBox");
-    const msgInput = document.getElementById("messageInput");
-    const sendBtn = document.getElementById("sendButton");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const viewCodesBtn = document.getElementById("viewCodesBtn");
-    const inviteCodesList = document.getElementById("inviteCodesList");
-    const fileInput = document.getElementById("fileInput");
+onAuthStateChanged(auth, async user=>{
+  if(user){
+    authContainer.style.display="none";
+    chatContainer.style.display="block";
+    const userRef = ref(db,"users/"+user.uid);
+    const snap = await get(userRef);
+    if(snap.exists()) currentNickname = snap.val().nickname||"Anonymous";
+    loadMessages();
+  }else{
+    chatContainer.style.display="none";
+    authContainer.style.display="block";
+    clearMessages();
+  }
+});
 
-    let messagesRef = null;
-    let currentNickname = "Unknown";
+function sendMessage(text,imageUrl=""){
+  if(!text&&!imageUrl) return;
+  const user=auth.currentUser;
+  push(ref(db,"messages"),{
+    uid:user.uid,
+    nickname:currentNickname,
+    email:user.email,
+    text:text,
+    imageUrl:imageUrl,
+    timestamp:Date.now()
+  });
+  msgInput.value="";
+}
 
-    document.getElementById("loginBtn").onclick = async () => {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      const code = document.getElementById("inviteCode").value;
-      if (!email || !pass) return showError("Please enter email and password.");
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-      } catch (err) {
-        showError(err.message);
-      }
-    };
+sendBtn.onclick = ()=>sendMessage(msgInput.value);
+msgInput.addEventListener("keypress", e=>{ if(e.key==="Enter") sendMessage(msgInput.value); });
 
-    document.getElementById("registerBtn").onclick = async () => {
-      const email = document.getElementById("email").value;
-      const pass = document.getElementById("password").value;
-      const code = document.getElementById("inviteCode").value;
+fileInput.addEventListener("change", async()=>{
+  const file=fileInput.files[0];
+  if(!file) return;
+  const formData = new FormData();
+  formData.append("file",file);
+  formData.append("upload_preset","z1d4s4al");
+  try{
+    const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload",{method:"POST",body:formData});
+    const data = await res.json();
+    sendMessage("",data.secure_url);
+    fileInput.value="";
+  }catch(err){ alert("Upload failed: "+err.message); }
+});
 
-      if (!email || !pass) return showError("Please enter email and password.");
-      if (!code) return showError("Please enter an invite code.");
+function loadMessages(){
+  if(messagesRef) off(messagesRef);
+  chatBox.innerHTML="";
+  messagesRef=query(ref(db,"messages"),orderByChild("timestamp"));
+  const messageElements={};
 
-      const inviteRef = ref(db, "invites/" + code);
-      const inviteSnap = await get(inviteRef);
-      if (!inviteSnap.exists()) return showError("Invalid invite code.");
-      await remove(inviteRef);
+  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us"];
 
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        const nick = prompt("Choose a nickname:");
-        await set(ref(db, "users/" + cred.user.uid), { nickname: nick || "Anonymous" });
+  // 💬 Emoji suffix per email
+  const SUFFIX_MAP = {
+    "aj.xanman@gmail.com": "👑",
+    "alexa_pears736@ahschools.us": "⚡",
+    "example@gmail.com": "🔥"
+  };
 
-        for (let i = 0; i < 6; i++) {
-          const newCode = Math.random().toString(36).substring(2, 8);
-          await set(ref(db, "invites/" + newCode), { creator: cred.user.uid });
-          await set(ref(db, `users/${cred.user.uid}/invitecodes/${newCode}`), true);
-        }
-      } catch (err) {
-        showError(err.message);
-      }
-    };
+  onChildAdded(messagesRef,snap=>{
+    const msg = snap.val();
+    const div = document.createElement("div");
+    div.id = "msg-"+snap.key;
 
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        authContainer.style.display = "none";
-        chatContainer.style.display = "block";
+    const date = new Date(msg.timestamp);
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2,'0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHour = ((hours+11)%12+1);
+    const timeStr = `${formattedHour}:${minutes} ${ampm}`;
 
-        const userRef = ref(db, "users/" + user.uid);
-        const snap = await get(userRef);
-        if (snap.exists()) {
-          currentNickname = snap.val().nickname || "Anonymous";
-        } else {
-          const nick = prompt("Choose a nickname:");
-          if (nick) {
-            currentNickname = nick;
-            await set(userRef, { nickname: nick });
-          }
-        }
-        loadMessages();
-      } else {
-        chatContainer.style.display = "none";
-        authContainer.style.display = "block";
-        clearMessages();
-      }
-    });
+    const suffix = SUFFIX_MAP[msg.email] || "";
 
-    logoutBtn.onclick = () => signOut(auth);
+    let content = `<strong>${msg.nickname || "Anonymous"}${suffix} (${timeStr}):</strong> `;
+    if(msg.text) content += msg.text + " ";
+    if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
 
-    viewCodesBtn.onclick = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-      const codesRef = ref(db, `users/${user.uid}/invitecodes`);
-      const snap = await get(codesRef);
-      if (snap.exists()) {
-        inviteCodesList.innerHTML = "<strong>Your Invite Codes:</strong><br>" +
-          Object.keys(snap.val()).join("<br>");
-        inviteCodesList.style.display =
-          inviteCodesList.style.display === "none" ? "block" : "none";
-      } else {
-        inviteCodesList.innerHTML = "No invite codes found.";
-        inviteCodesList.style.display = "block";
-      }
-    };
+    div.innerHTML = content;
 
-    function showError(msg) {
-      document.getElementById("authError").innerText = msg;
+    if (msg.uid === auth.currentUser.uid || ADMIN_EMAILS.includes(auth.currentUser.email)) {
+      const del = document.createElement("span");
+      del.className = "delete-btn";
+      del.textContent = "[delete]";
+      del.onclick = () => remove(ref(db,"messages/"+snap.key));
+      div.appendChild(del);
     }
 
-    async function uploadToCloudinary(file) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", UPLOAD_PRESET);
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
-        method: "POST",
-        body: formData
-      });
+    const img = div.querySelector(".chat-img");
+    if(img) img.onclick = ()=>{ modalImg.src = img.src; imgModal.style.display = "flex"; };
 
-      const data = await res.json();
-      return data.secure_url;
-    }
+    messageElements[snap.key] = div;
+  });
 
-    async function sendMessage() {
-      const msg = msgInput.value.trim();
-      const user = auth.currentUser;
-      if (!msg && !fileInput.files.length) return;
+  onChildRemoved(ref(db,"messages"),snap=>{
+    const key=snap.key;
+    if(messageElements[key]){ messageElements[key].remove(); delete messageElements[key]; }
+  });
+}
 
-      let imageUrl = "";
-      if (fileInput.files.length) {
-        imageUrl = await uploadToCloudinary(fileInput.files[0]);
-        fileInput.value = "";
-      }
+imgModal.onclick = ()=>{ imgModal.style.display="none"; modalImg.src=""; };
 
-      push(ref(db, "messages"), {
-        uid: user.uid,
-        email: user.email,
-        nickname: currentNickname,
-        text: msg,
-        image: imageUrl || "",
-        timestamp: Date.now()
-      });
+generateBtn.onclick = async ()=>{
+  const user=auth.currentUser;
+  const userRef=ref(db,`users/${user.uid}/inviteCodes`);
+  const snap=await get(userRef);
+  const codes=snap.exists()?Object.keys(snap.val()):[];
+  if(codes.length>=6) return alert("You can only create 6 invite codes.");
+  const newCode=Math.random().toString(36).substring(2,8).toUpperCase();
+  await set(ref(db,"inviteCodes/"+newCode),{used:false,creator:user.uid});
+  await set(ref(db,`users/${user.uid}/inviteCodes/${newCode}`),{used:false,createdAt:Date.now()});
+  alert("New invite code generated! Click 'View Invite Codes' to see it.");
+};
 
-      msgInput.value = "";
-    }
+viewBtn.onclick = ()=>{
+  if(myCodesDiv.style.display==="none"){ displayMyCodes(); myCodesDiv.style.display="block"; viewBtn.textContent="Hide Invite Codes"; }
+  else{ myCodesDiv.style.display="none"; viewBtn.textContent="View Invite Codes"; }
+};
 
-    sendBtn.onclick = sendMessage;
-    msgInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") sendMessage();
-    });
+function displayMyCodes(){
+  const user=auth.currentUser;
+  get(ref(db,`users/${user.uid}/inviteCodes`)).then(snap=>{
+    const codes=snap.exists()?Object.keys(snap.val()):[];
+    myCodesDiv.innerHTML = codes.length ? "Your codes: "+codes.join(", ") : "No invite codes yet";
+  });
+}
 
-    function formatTime(ms) {
-      const date = new Date(ms);
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-
-    function loadMessages() {
-      if (messagesRef) off(messagesRef);
-      chatBox.innerHTML = "";
-      messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
-
-      const messageElements = {};
-
-      onChildAdded(messagesRef, (snap) => {
-        const msg = snap.val();
-        const div = document.createElement("div");
-        div.id = "msg-" + snap.key;
-
-        let displayName = msg.nickname || "Anonymous";
-        if (EMAIL_EMOJIS[msg.email]) {
-          displayName += " " + EMAIL_EMOJIS[msg.email];
-        }
-
-        div.innerHTML = `<strong>${displayName}</strong> <small>${formatTime(msg.timestamp)}</small>: ${msg.text || ""}`;
-
-        if (msg.image) {
-          const img = document.createElement("img");
-          img.src = msg.image;
-          img.className = "chat-image";
-          img.onclick = () => window.open(msg.image, "_blank");
-          div.appendChild(document.createElement("br"));
-          div.appendChild(img);
-        }
-
-        const user = auth.currentUser;
-        if (msg.uid === user.uid || ADMINS.includes(user.email)) {
-          const del = document.createElement("span");
-          del.className = "delete-btn";
-          del.textContent = "[delete]";
-          del.onclick = () => remove(ref(db, "messages/" + snap.key));
-          div.appendChild(del);
-        }
-
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
-        messageElements[snap.key] = div;
-      });
-
-      onChildRemoved(ref(db, "messages"), (snap) => {
-        const key = snap.key;
-        if (messageElements[key]) {
-          messageElements[key].remove();
-          delete messageElements[key];
-        }
-      });
-    }
-
-    function clearMessages() {
-      chatBox.innerHTML = "";
-      if (messagesRef) off(messagesRef);
-    }
-  </script>
+logoutBtn.onclick=()=>signOut(auth);
+</script>
 </body>
 </html>
