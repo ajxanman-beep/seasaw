@@ -246,7 +246,7 @@ function loadMessages(){
       "jacks_waara234@ahschools.us": " ⚡"
     };
 
-const suffix = SUFFIXES[msg.email] || "";
+    const suffix = SUFFIXES[msg.email] || "";
 
     let content = `<strong>${msg.nickname || "Anonymous"}${suffix} (${timeStr}):</strong> `;
     if(msg.text) content += msg.text + " ";
