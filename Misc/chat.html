@@ -67,7 +67,6 @@
   </style>
 </head>
 <body>
-  <!-- Authentication -->
   <div id="authContainer">
     <h2>Sign In or Register</h2>
     <input type="email" id="email" placeholder="Email"><br><br>
@@ -78,7 +77,6 @@
     <p id="authError" style="color:red;"></p>
   </div>
 
-  <!-- Chat -->
   <div id="chatContainer">
     <h1>Chat Room</h1>
     <div id="chatBox"></div>
@@ -95,15 +93,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-    import { 
-      getAuth, onAuthStateChanged, signInWithEmailAndPassword, 
-      createUserWithEmailAndPassword, signOut 
-    } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-    import { 
-      getDatabase, ref, push, onChildAdded, onChildRemoved, 
-      remove, query, orderByChild, off, set, get 
-    } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
-    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+    import { getDatabase, ref, push, onChildAdded, onChildRemoved, remove, query, orderByChild, off, set, get } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
@@ -119,7 +110,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
-    const storage = getStorage(app);
 
     const authContainer = document.getElementById("authContainer");
     const chatContainer = document.getElementById("chatContainer");
@@ -138,7 +128,6 @@
     function showError(msg) { document.getElementById("authError").innerText = msg; }
     function clearMessages() { chatBox.innerHTML = ""; if (messagesRef) off(messagesRef); }
 
-    // --- Login ---
     document.getElementById("loginBtn").onclick = async () => {
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
@@ -146,18 +135,15 @@
       catch (err) { showError(err.message); }
     };
 
-    // --- Register ---
     document.getElementById("registerBtn").onclick = async () => {
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
       const code = document.getElementById("inviteCode").value.trim();
       if (!code) return showError("Invite code required.");
-
       const codeRef = ref(db, "inviteCodes/" + code);
       const snap = await get(codeRef);
       if (!snap.exists()) return showError("Invalid invite code.");
       if (snap.val().used) return showError("Invite code already used.");
-
       try {
         await set(codeRef, { ...snap.val(), used: true });
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
@@ -168,16 +154,13 @@
       } catch (err) { showError(err.message); }
     };
 
-    // --- Auth State ---
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         authContainer.style.display = "none";
         chatContainer.style.display = "block";
-
         const userRef = ref(db, "users/" + user.uid);
         const snap = await get(userRef);
         if (snap.exists()) currentNickname = snap.val().nickname || "Anonymous";
-
         loadMessages();
       } else {
         chatContainer.style.display = "none";
@@ -186,7 +169,6 @@
       }
     });
 
-    // --- Send Text Message ---
     function sendMessage(text, imageUrl = "") {
       if (!text && !imageUrl) return;
       const user = auth.currentUser;
@@ -203,28 +185,29 @@
     sendBtn.onclick = () => sendMessage(msgInput.value);
     msgInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(msgInput.value); });
 
-    // --- Upload Image/GIF ---
+    // --- Cloudinary upload ---
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files[0];
       if (!file) return;
-      const user = auth.currentUser;
-      const fileName = Date.now() + "_" + file.name;
-      const fileRef = storageRef(storage, "chat_files/" + fileName);
-
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      sendMessage("", url);
-      fileInput.value = "";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "z1d4s4al");
+      try {
+        const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        sendMessage("", data.secure_url);
+        fileInput.value = "";
+      } catch (err) {
+        alert("Upload failed: " + err.message);
+      }
     });
 
-    // --- Load Messages ---
     function loadMessages() {
       if (messagesRef) off(messagesRef);
       chatBox.innerHTML = "";
       messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
       const messageElements = {};
-
-      onChildAdded(messagesRef, (snap) => {
+      onChildAdded(messagesRef, snap => {
         const msg = snap.val();
         const div = document.createElement("div");
         div.id = "msg-" + snap.key;
@@ -232,7 +215,6 @@
         if (msg.text) content += msg.text + " ";
         if (msg.imageUrl) content += `<br><img src="${msg.imageUrl}">`;
         div.innerHTML = content;
-
         if (msg.uid === auth.currentUser.uid) {
           const del = document.createElement("span");
           del.className = "delete-btn";
@@ -244,31 +226,24 @@
         chatBox.scrollTop = chatBox.scrollHeight;
         messageElements[snap.key] = div;
       });
-
-      onChildRemoved(ref(db, "messages"), (snap) => {
+      onChildRemoved(ref(db, "messages"), snap => {
         const key = snap.key;
-        if (messageElements[key]) {
-          messageElements[key].remove();
-          delete messageElements[key];
-        }
+        if (messageElements[key]) { messageElements[key].remove(); delete messageElements[key]; }
       });
     }
 
-    // --- Generate Invite Codes ---
     generateBtn.onclick = async () => {
       const user = auth.currentUser;
       const userRef = ref(db, `users/${user.uid}/inviteCodes`);
       const snap = await get(userRef);
       const codes = snap.exists() ? Object.keys(snap.val()) : [];
       if (codes.length >= 6) return alert("You can only create 6 invite codes.");
-
       const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       await set(ref(db, "inviteCodes/" + newCode), { used: false, creator: user.uid });
       await set(ref(db, `users/${user.uid}/inviteCodes/${newCode}`), { used: false, createdAt: Date.now() });
       alert("New invite code generated! Click 'View Invite Codes' to see it.");
     };
 
-    // --- View/Hide Invite Codes ---
     viewBtn.onclick = () => {
       if (myCodesDiv.style.display === "none") {
         displayMyCodes();
@@ -289,7 +264,6 @@
     }
 
     logoutBtn.onclick = () => signOut(auth);
-
   </script>
 </body>
 </html>
