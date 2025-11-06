@@ -56,7 +56,6 @@
   #viewCodesBtn { background: #ffaa00; margin-top:10px; }
   #myCodes { margin-top: 5px; word-break: break-all; display: none; }
   img.chat-img { border-radius: 5px; max-width: 200px; max-height: 200px; display:block; margin-top:5px; cursor:pointer; }
-  /* Modal for full-size image */
   #imgModal {
     display:none;
     position:fixed;
@@ -67,11 +66,7 @@
     justify-content:center;
     align-items:center;
   }
-  #imgModal img {
-    max-width:90%;
-    max-height:90%;
-    border-radius:5px;
-  }
+  #imgModal img { max-width:90%; max-height:90%; border-radius:5px; }
 </style>
 </head>
 <body>
@@ -100,7 +95,6 @@
   <button id="logoutBtn" style="margin-top:10px;background:#ff4444;">Logout</button>
 </div>
 
-<!-- Image Modal -->
 <div id="imgModal">
   <img id="modalImg" src="">
 </div>
@@ -221,46 +215,44 @@ function loadMessages(){
   messagesRef=query(ref(db,"messages"),orderByChild("timestamp"));
   const messageElements={};
 
-  onChildAdded(messagesRef, snap => {
-  const msg = snap.val();
-  const div = document.createElement("div");
-  div.id = "msg-" + snap.key;
+  onChildAdded(messagesRef,snap=>{
+    const msg = snap.val();
+    const div = document.createElement("div");
+    div.id = "msg-"+snap.key;
 
-  // Format timestamp
-  const date = new Date(msg.timestamp);
-  const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const formattedHour = ((hours + 11) % 12 + 1); // convert 0-23 to 1-12
-  const timeStr = `${formattedHour}:${minutes} ${ampm}`;
+    // Format timestamp
+    const date = new Date(msg.timestamp);
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2,'0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHour = ((hours+11)%12+1);
+    const timeStr = `${formattedHour}:${minutes} ${ampm}`;
 
-  let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
-  if(msg.text) content += msg.text + " ";
-  if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
+    let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
+    if(msg.text) content += msg.text + " ";
+    if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
 
-  div.innerHTML = content;
+    div.innerHTML = content;
 
-  if(msg.uid === auth.currentUser.uid){
-    const del = document.createElement("span");
-    del.className = "delete-btn";
-    del.textContent = "[delete]";
-    del.onclick = () => remove(ref(db, "messages/" + snap.key));
-    div.appendChild(del);
-  }
+    if(msg.uid === auth.currentUser.uid){
+      const del = document.createElement("span");
+      del.className = "delete-btn";
+      del.textContent = "[delete]";
+      del.onclick = () => remove(ref(db,"messages/"+snap.key));
+      div.appendChild(del);
+    }
 
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-  // Add click listener for image
-  const img = div.querySelector(".chat-img");
-  if(img) img.onclick = () => {
-    modalImg.src = img.src;
-    imgModal.style.display = "flex";
-  };
-});
+    // Click to enlarge image
+    const img = div.querySelector(".chat-img");
+    if(img) img.onclick = ()=>{
+      modalImg.src = img.src;
+      imgModal.style.display = "flex";
+    };
 
-
-    messageElements[snap.key]=div;
+    messageElements[snap.key] = div;
   });
 
   onChildRemoved(ref(db,"messages"),snap=>{
@@ -269,7 +261,7 @@ function loadMessages(){
   });
 }
 
-// Close modal when clicking anywhere
+// Close modal
 imgModal.onclick = ()=>{ imgModal.style.display="none"; modalImg.src=""; };
 
 // Invite codes
