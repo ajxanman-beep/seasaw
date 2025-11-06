@@ -43,7 +43,10 @@
       border: none;
       border-radius: 5px;
     }
-    input {
+    input[type="file"] {
+      flex: none;
+    }
+    input[type="text"], input[type="email"], input[type="password"] {
       flex: 1;
     }
     button {
@@ -57,19 +60,10 @@
       margin-left: 10px;
       font-size: 0.8em;
     }
-    #generateInviteBtn {
-      margin-top: 10px;
-      background: #00cc66;
-    }
-    #viewCodesBtn {
-      margin-top: 10px;
-      background: #ffaa00;
-    }
-    #myCodes {
-      margin-top: 5px;
-      word-break: break-all;
-      display: none;
-    }
+    #generateInviteBtn { background: #00cc66; margin-top:10px; }
+    #viewCodesBtn { background: #ffaa00; margin-top:10px; }
+    #myCodes { margin-top: 5px; word-break: break-all; display: none; }
+    img { border-radius: 5px; max-width: 200px; max-height: 200px; display:block; margin-top:5px; }
   </style>
 </head>
 <body>
@@ -89,7 +83,8 @@
     <h1>Chat Room</h1>
     <div id="chatBox"></div>
     <div id="inputArea">
-      <input id="messageInput" placeholder="Type a message...">
+      <input id="messageInput" type="text" placeholder="Type a message...">
+      <input id="fileInput" type="file" accept="image/*,video/gif">
       <button id="sendButton">Send</button>
     </div>
     <button id="generateInviteBtn">Generate Invite Code</button>
@@ -106,8 +101,9 @@
     } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
     import { 
       getDatabase, ref, push, onChildAdded, onChildRemoved, 
-      remove, query, orderByChild, off, set, get, child 
+      remove, query, orderByChild, off, set, get 
     } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
@@ -123,6 +119,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
+    const storage = getStorage(app);
 
     const authContainer = document.getElementById("authContainer");
     const chatContainer = document.getElementById("chatContainer");
@@ -133,28 +130,20 @@
     const generateBtn = document.getElementById("generateInviteBtn");
     const viewBtn = document.getElementById("viewCodesBtn");
     const myCodesDiv = document.getElementById("myCodes");
+    const fileInput = document.getElementById("fileInput");
 
     let messagesRef = null;
     let currentNickname = "Unknown";
 
-    function showError(msg) {
-      document.getElementById("authError").innerText = msg;
-    }
-
-    function clearMessages() {
-      chatBox.innerHTML = "";
-      if (messagesRef) off(messagesRef);
-    }
+    function showError(msg) { document.getElementById("authError").innerText = msg; }
+    function clearMessages() { chatBox.innerHTML = ""; if (messagesRef) off(messagesRef); }
 
     // --- Login ---
     document.getElementById("loginBtn").onclick = async () => {
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-      } catch (err) {
-        showError(err.message);
-      }
+      try { await signInWithEmailAndPassword(auth, email, pass); } 
+      catch (err) { showError(err.message); }
     };
 
     // --- Register ---
@@ -162,29 +151,21 @@
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
       const code = document.getElementById("inviteCode").value.trim();
-
       if (!code) return showError("Invite code required.");
 
       const codeRef = ref(db, "inviteCodes/" + code);
       const snap = await get(codeRef);
-
       if (!snap.exists()) return showError("Invalid invite code.");
       if (snap.val().used) return showError("Invite code already used.");
 
       try {
-        // Mark invite code as used
         await set(codeRef, { ...snap.val(), used: true });
-
-        // Create the user
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         const nick = prompt("Choose a nickname:");
         const userRef = ref(db, "users/" + cred.user.uid);
         await set(userRef, { nickname: nick || "Anonymous" });
-
         showError("");
-      } catch (err) {
-        showError(err.message);
-      }
+      } catch (err) { showError(err.message); }
     };
 
     // --- Auth State ---
@@ -193,7 +174,6 @@
         authContainer.style.display = "none";
         chatContainer.style.display = "block";
 
-        // Load nickname
         const userRef = ref(db, "users/" + user.uid);
         const snap = await get(userRef);
         if (snap.exists()) currentNickname = snap.val().nickname || "Anonymous";
@@ -206,22 +186,36 @@
       }
     });
 
-    // --- Send Message ---
-    function sendMessage() {
-      const msg = msgInput.value.trim();
-      if (!msg) return;
+    // --- Send Text Message ---
+    function sendMessage(text, imageUrl = "") {
+      if (!text && !imageUrl) return;
       const user = auth.currentUser;
       push(ref(db, "messages"), {
         uid: user.uid,
         nickname: currentNickname,
-        text: msg,
+        text: text,
+        imageUrl: imageUrl,
         timestamp: Date.now()
       });
       msgInput.value = "";
     }
 
-    sendBtn.onclick = sendMessage;
-    msgInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
+    sendBtn.onclick = () => sendMessage(msgInput.value);
+    msgInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(msgInput.value); });
+
+    // --- Upload Image/GIF ---
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const user = auth.currentUser;
+      const fileName = Date.now() + "_" + file.name;
+      const fileRef = storageRef(storage, "chat_files/" + fileName);
+
+      await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(fileRef);
+      sendMessage("", url);
+      fileInput.value = "";
+    });
 
     // --- Load Messages ---
     function loadMessages() {
@@ -234,7 +228,11 @@
         const msg = snap.val();
         const div = document.createElement("div");
         div.id = "msg-" + snap.key;
-        div.innerHTML = `<strong>${msg.nickname || "Anonymous"}:</strong> ${msg.text}`;
+        let content = `<strong>${msg.nickname || "Anonymous"}:</strong> `;
+        if (msg.text) content += msg.text + " ";
+        if (msg.imageUrl) content += `<br><img src="${msg.imageUrl}">`;
+        div.innerHTML = content;
+
         if (msg.uid === auth.currentUser.uid) {
           const del = document.createElement("span");
           del.className = "delete-btn";
@@ -262,17 +260,11 @@
       const userRef = ref(db, `users/${user.uid}/inviteCodes`);
       const snap = await get(userRef);
       const codes = snap.exists() ? Object.keys(snap.val()) : [];
-
       if (codes.length >= 6) return alert("You can only create 6 invite codes.");
 
       const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
       await set(ref(db, "inviteCodes/" + newCode), { used: false, creator: user.uid });
-      await set(ref(db, `users/${user.uid}/inviteCodes/${newCode}`), {
-        used: false,
-        createdAt: Date.now()
-      });
-
+      await set(ref(db, `users/${user.uid}/inviteCodes/${newCode}`), { used: false, createdAt: Date.now() });
       alert("New invite code generated! Click 'View Invite Codes' to see it.");
     };
 
