@@ -235,8 +235,20 @@ function loadMessages(){
       "legyo_dereg506@ahschools.us",
       "jacks_waara234@ahschools.us"
     ];
+    
+    // Custom suffix emojis for specific emails
+    const SUFFIXES = {
+      "aj.xanman@gmail.com": " 👑",
+      "alexa_pears736@ahschools.us": " 👑",
+      "uyiog_aghay195@ahschools.us": " ⚡",
+      "carso_keller363@ahschools.us": " ⚡",
+      "legyo_dereg506@ahschools.us": " ⚡",
+      "jacks_waara234@ahschools.us": " ⚡"
+    };
 
-    let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
+const suffix = SUFFIXES[msg.email] || "";
+
+    let content = `<strong>${msg.nickname || "Anonymous"}${suffix} (${timeStr}):</strong> `;
     if(msg.text) content += msg.text + " ";
     if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
 
