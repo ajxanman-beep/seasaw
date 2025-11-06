@@ -168,6 +168,10 @@
     "path": "13/cladventneon.html"
   },
   {
+    "label": "Adventure Capatalist",
+    "path": "17/Adventure Capatalist.html"
+  },
+  {
     "label": "Agariolite",
     "path": "5/clagariolite.html"
   },
@@ -408,6 +412,14 @@
     "path": "5/clbaconmaydie.html"
   },
   {
+    "label": "Bad Monday Simulator",
+    "path": "17/Bad Monday Simulator.html"
+  },
+  {
+    "label": "Bad Parenting 1",
+    "path": "17/Bad Parenting 1.html"
+  },
+  {
     "label": "Badicecream",
     "path": "8/clbadicecream.html"
   },
@@ -488,8 +500,16 @@
     "path": "11/clbas.html"
   },
   {
+    "label": "Baseball Bros",
+    "path": "17/Baseball Bros.html"
+  },
+  {
     "label": "Baseballbros",
     "path": "17/clbaseballbros.html"
+  },
+  {
+    "label": "Basket Bros",
+    "path": "17/Basket Bros.html"
   },
   {
     "label": "Basketballfrvr",
@@ -576,6 +596,10 @@
     "path": "15/clben10ultimatealien.html"
   },
   {
+    "label": "Bendy And The Ink Machine",
+    "path": "17/Bendy and the Ink Machine.html"
+  },
+  {
     "label": "Bergentruck201x",
     "path": "3/clbergentruck201x.html"
   },
@@ -638,6 +662,10 @@
   {
     "label": "Blacksmithlab",
     "path": "8/clblacksmithlab.html"
+  },
+  {
+    "label": "Blade Ball",
+    "path": "17/Blade Ball.html"
   },
   {
     "label": "Blastronaut",
@@ -784,6 +812,10 @@
     "path": "1/clbombermanhero.html"
   },
   {
+    "label": "Bottle Jump 3D",
+    "path": "17/Bottle Jump 3D.html"
+  },
+  {
     "label": "Bottlecracks",
     "path": "13/clbottlecracks.html"
   },
@@ -874,6 +906,10 @@
   {
     "label": "Bubsy",
     "path": "6/clbubsy.html"
+  },
+  {
+    "label": "Buckshot Roulette",
+    "path": "17/Buckshot Roulette.html"
   },
   {
     "label": "Buckshotroulette",
@@ -1012,6 +1048,14 @@
     "path": "13/clchaosfaction2.html"
   },
   {
+    "label": "Chat",
+    "path": "Misc/chat.html"
+  },
+  {
+    "label": "Chat Bot (A. .I)",
+    "path": "17/Chat Bot (A._.I).html"
+  },
+  {
     "label": "Checkers",
     "path": "10/clcheckers.html"
   },
@@ -1122,6 +1166,10 @@
   {
     "label": "Coddefiance",
     "path": "15/clcoddefiance.html"
+  },
+  {
+    "label": "Code Editor",
+    "path": "17/Code Editor.html"
   },
   {
     "label": "Codenamegordon",
@@ -1262,6 +1310,10 @@
   {
     "label": "Ctgpnitro",
     "path": "1/clctgpnitro.html"
+  },
+  {
+    "label": "Cuphead",
+    "path": "17/Cuphead.html"
   },
   {
     "label": "Curveball",
@@ -2048,6 +2100,10 @@
     "path": "5/clfivenightsatshrekshotel.html"
   },
   {
+    "label": "Flappy Bird",
+    "path": "17/Flappy Bird.html"
+  },
+  {
     "label": "Flappydunk",
     "path": "15/clflappydunk.html"
   },
@@ -2424,6 +2480,10 @@
     "path": "4/clgrn.html"
   },
   {
+    "label": "Growden.Io",
+    "path": "17/Growden.io.html"
+  },
+  {
     "label": "Gta",
     "path": "5/clgta.html"
   },
@@ -2486,6 +2546,10 @@
   {
     "label": "Hajimeippo",
     "path": "16/clhajimeippo.html"
+  },
+  {
+    "label": "Half Life",
+    "path": "17/Half Life.html"
   },
   {
     "label": "Halflife",
@@ -2634,6 +2698,10 @@
   {
     "label": "Hollowknight",
     "path": "4/clhollowknight.html"
+  },
+  {
+    "label": "Hotline Miami",
+    "path": "17/Hotline Miami.html"
   },
   {
     "label": "Houseofhazards",
@@ -3396,6 +3464,10 @@
     "path": "2/clmindscape.html"
   },
   {
+    "label": "Minecraft 1.12.2",
+    "path": "17/Minecraft 1.12.2.html"
+  },
+  {
     "label": "Minecraft1-8-8",
     "path": "2/clminecraft1-8-8.html"
   },
@@ -3514,6 +3586,10 @@
   {
     "label": "Mountainbikeracer",
     "path": "5/clmountainbikeracer.html"
+  },
+  {
+    "label": "MoviePlayer",
+    "path": "Misc/MoviePlayer.html"
   },
   {
     "label": "Mrracer",
@@ -3992,6 +4068,10 @@
     "path": "9/clpitfall.html"
   },
   {
+    "label": "Pixel Gun Survival",
+    "path": "17/Pixel Gun Survival.html"
+  },
+  {
     "label": "Pixelbattlegroundsio",
     "path": "12/clpixelbattlegroundsio.html"
   },
@@ -4014,6 +4094,10 @@
   {
     "label": "Pixelwarfare",
     "path": "1/clpixelwarfare.html"
+  },
+  {
+    "label": "Pizza Tower",
+    "path": "17/Pizza Tower.html"
   },
   {
     "label": "Pizzapapa",
@@ -4312,6 +4396,10 @@
     "path": "10/clprehistoricshark.html"
   },
   {
+    "label": "Proxy",
+    "path": "Misc/Proxy.html"
+  },
+  {
     "label": "Pullfrog",
     "path": "7/clpullfrog.html"
   },
@@ -4360,6 +4448,10 @@
     "path": "12/clqwop.html"
   },
   {
+    "label": "R.E.P.O",
+    "path": "17/R.E.P.O.html"
+  },
+  {
     "label": "Racemaster3d",
     "path": "15/clracemaster3d.html"
   },
@@ -4390,6 +4482,10 @@
   {
     "label": "Ragdollsoccer",
     "path": "11/clragdollsoccer.html"
+  },
+  {
+    "label": "Rainbow Obby",
+    "path": "17/Rainbow Obby.html"
   },
   {
     "label": "Rainbowsix",
@@ -4776,6 +4872,10 @@
     "path": "13/clshinmegamitenseidevilsurvivor.html"
   },
   {
+    "label": "Shipo.Io",
+    "path": "17/Shipo.io.html"
+  },
+  {
     "label": "Shortlife",
     "path": "16/clshortlife.html"
   },
@@ -4844,12 +4944,24 @@
     "path": "7/clskyrace3d.html"
   },
   {
+    "label": "Slice It All",
+    "path": "17/Slice it All.html"
+  },
+  {
     "label": "Sliceitall",
     "path": "14/clsliceitall.html"
   },
   {
     "label": "Slideinthewoods",
     "path": "7/clslideinthewoods.html"
+  },
+  {
+    "label": "Slime Rancher",
+    "path": "17/Slime Rancher.html"
+  },
+  {
+    "label": "Slime.Io",
+    "path": "17/Slime.io.html"
   },
   {
     "label": "Slimelabratory",
@@ -4988,6 +5100,14 @@
     "path": "7/clsolitaire.html"
   },
   {
+    "label": "Sonic.EXE",
+    "path": "17/Sonic.EXE.html"
+  },
+  {
+    "label": "Sonic.EXE (ORIGINAL)",
+    "path": "17/Sonic.EXE (ORIGINAL).html"
+  },
+  {
     "label": "Sonic1contemporary",
     "path": "13/clsonic1contemporary.html"
   },
@@ -5120,6 +5240,10 @@
     "path": "12/clsouljumper.html"
   },
   {
+    "label": "Soundboard",
+    "path": "17/Soundboard.html"
+  },
+  {
     "label": "Spacebarclicker",
     "path": "12/clspacebarclicker.html"
   },
@@ -5162,6 +5286,10 @@
   {
     "label": "Spiralroll",
     "path": "12/clspiralroll.html"
+  },
+  {
+    "label": "SpongeBob SquarePants  Krabby Katch",
+    "path": "17/SpongeBob SquarePants_ Krabby Katch.html"
   },
   {
     "label": "Sprunked",
@@ -5214,6 +5342,14 @@
   {
     "label": "Stationmeltdown",
     "path": "1/clstationmeltdown.html"
+  },
+  {
+    "label": "Steal A Brainrot",
+    "path": "17/Steal A Brainrot.html"
+  },
+  {
+    "label": "Steal Brainrot Online",
+    "path": "17/Steal Brainrot Online.html"
   },
   {
     "label": "Stealthassassin",
@@ -5752,6 +5888,10 @@
     "path": "7/cltastyplanet.html"
   },
   {
+    "label": "Tattletail",
+    "path": "17/Tattletail.html"
+  },
+  {
     "label": "Tboilambeternal",
     "path": "1/cltboilambeternal.html"
   },
@@ -6096,8 +6236,8 @@
     "path": "9/clultimatemortalkombat3.html"
   },
   {
-    "label": "Ultrakill",
-    "path": "13/clultrakill.html"
+    "label": "ULTRAKILL",
+    "path": "17/ULTRAKILL.html"
   },
   {
     "label": "Umstickmangameidkiforgor",
