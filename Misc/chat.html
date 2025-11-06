@@ -273,7 +273,12 @@ imgModal.onclick = ()=>{ imgModal.style.display="none"; modalImg.src=""; };
 // ✅ Updated: Admins have infinite codes
 generateBtn.onclick = async ()=>{
   const user=auth.currentUser;
-  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us"];
+  const ADMIN_EMAILS = ["aj.xanman@gmail.com",
+      "alexa_pears736@ahschools.us",
+      "uyiog_aghay195@ahschools.us",
+      "carso_keller@ahschools.us",
+      "Legyo_dereg506@ahschools.us",
+      "jacks_waara234@ahschools.us"], ;
   const userRef=ref(db,`users/${user.uid}/inviteCodes`);
   const snap=await get(userRef);
   const codes=snap.exists()?Object.keys(snap.val()):[];
