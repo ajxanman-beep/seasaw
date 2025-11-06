@@ -216,13 +216,14 @@ function loadMessages(){
   messagesRef=query(ref(db,"messages"),orderByChild("timestamp"));
   const messageElements={};
 
-  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us"];
+  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us","ryguy11210@gmail.com","Legyo_dereg506@ahschools.us"];
 
   // 💬 Emoji suffix per email
   const SUFFIX_MAP = {
     "aj.xanman@gmail.com": "👑",
     "alexa_pears736@ahschools.us": "⚡",
-    "example@gmail.com": "🔥"
+    "ryguy11210@gmail.com": "⚡",
+    "Legyo_dereg506@ahschools.us": "⚡"
   };
 
   onChildAdded(messagesRef,snap=>{
