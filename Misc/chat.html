@@ -185,7 +185,6 @@ function sendMessage(text,imageUrl=""){
   push(ref(db,"messages"),{
     uid:user.uid,
     nickname:currentNickname,
-    email:user.email,
     text:text,
     imageUrl:imageUrl,
     timestamp:Date.now()
@@ -216,16 +215,6 @@ function loadMessages(){
   messagesRef=query(ref(db,"messages"),orderByChild("timestamp"));
   const messageElements={};
 
-  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us","ryguy11210@gmail.com","Legyo_dereg506@ahschools.us"];
-
-  // 💬 Emoji suffix per email
-  const SUFFIX_MAP = {
-    "aj.xanman@gmail.com": "👑",
-    "alexa_pears736@ahschools.us": "⚡",
-    "ryguy11210@gmail.com": "⚡",
-    "Legyo_dereg506@ahschools.us": "⚡"
-  };
-
   onChildAdded(messagesRef,snap=>{
     const msg = snap.val();
     const div = document.createElement("div");
@@ -238,9 +227,12 @@ function loadMessages(){
     const formattedHour = ((hours+11)%12+1);
     const timeStr = `${formattedHour}:${minutes} ${ampm}`;
 
-    const suffix = SUFFIX_MAP[msg.email] || "";
+    const ADMIN_EMAILS = [
+      "aj.xanman@gmail.com",
+      "alexa_pears736@ahschools.us"
+    ];
 
-    let content = `<strong>${msg.nickname || "Anonymous"}${suffix} (${timeStr}):</strong> `;
+    let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
     if(msg.text) content += msg.text + " ";
     if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
 
@@ -258,7 +250,10 @@ function loadMessages(){
     chatBox.scrollTop = chatBox.scrollHeight;
 
     const img = div.querySelector(".chat-img");
-    if(img) img.onclick = ()=>{ modalImg.src = img.src; imgModal.style.display = "flex"; };
+    if(img) img.onclick = ()=>{
+      modalImg.src = img.src;
+      imgModal.style.display = "flex";
+    };
 
     messageElements[snap.key] = div;
   });
@@ -271,12 +266,15 @@ function loadMessages(){
 
 imgModal.onclick = ()=>{ imgModal.style.display="none"; modalImg.src=""; };
 
+// ✅ Updated: Admins have infinite codes
 generateBtn.onclick = async ()=>{
   const user=auth.currentUser;
+  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us"];
   const userRef=ref(db,`users/${user.uid}/inviteCodes`);
   const snap=await get(userRef);
   const codes=snap.exists()?Object.keys(snap.val()):[];
-  if(codes.length>=6) return alert("You can only create 6 invite codes.");
+  if(!ADMIN_EMAILS.includes(user.email) && codes.length>=6) 
+    return alert("You can only create 6 invite codes.");
   const newCode=Math.random().toString(36).substring(2,8).toUpperCase();
   await set(ref(db,"inviteCodes/"+newCode),{used:false,creator:user.uid});
   await set(ref(db,`users/${user.uid}/inviteCodes/${newCode}`),{used:false,createdAt:Date.now()});
