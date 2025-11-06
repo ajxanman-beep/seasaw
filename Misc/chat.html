@@ -135,6 +135,11 @@ const modalImg = document.getElementById("modalImg");
 let messagesRef = null;
 let currentNickname = "Unknown";
 
+const ADMIN_EMAILS = [
+  "aj.xanman@gmail.com",
+  "alexa_pears736@ahschools.us"
+];
+
 function showError(msg){ document.getElementById("authError").innerText = msg; }
 function clearMessages(){ chatBox.innerHTML=""; if(messagesRef) off(messagesRef); }
 
@@ -157,7 +162,8 @@ document.getElementById("registerBtn").onclick = async () => {
   try{
     await set(codeRef,{...snap.val(), used:true});
     const cred = await createUserWithEmailAndPassword(auth,email,pass);
-    const nick = prompt("Choose a nickname:");
+    let nick = prompt("Choose a nickname:");
+    if (ADMIN_EMAILS.includes(email)) nick = nick + " 👑";
     const userRef = ref(db,"users/"+cred.user.uid);
     await set(userRef,{nickname:nick||"Anonymous"});
     showError("");
@@ -185,7 +191,6 @@ function sendMessage(text,imageUrl=""){
   push(ref(db,"messages"),{
     uid:user.uid,
     nickname:currentNickname,
-    email:user.email,
     text:text,
     imageUrl:imageUrl,
     timestamp:Date.now()
@@ -216,16 +221,6 @@ function loadMessages(){
   messagesRef=query(ref(db,"messages"),orderByChild("timestamp"));
   const messageElements={};
 
-  const ADMIN_EMAILS = ["aj.xanman@gmail.com","alexa_pears736@ahschools.us","ryguy11210@gmail.com","Legyo_dereg506@ahschools.us"];
-
-  // 💬 Emoji suffix per email
-  const SUFFIX_MAP = {
-    "aj.xanman@gmail.com": "👑",
-    "alexa_pears736@ahschools.us": "⚡",
-    "ryguy11210@gmail.com": "⚡",
-    "Legyo_dereg506@ahschools.us": "⚡"
-  };
-
   onChildAdded(messagesRef,snap=>{
     const msg = snap.val();
     const div = document.createElement("div");
@@ -238,9 +233,7 @@ function loadMessages(){
     const formattedHour = ((hours+11)%12+1);
     const timeStr = `${formattedHour}:${minutes} ${ampm}`;
 
-    const suffix = SUFFIX_MAP[msg.email] || "";
-
-    let content = `<strong>${msg.nickname || "Anonymous"}${suffix} (${timeStr}):</strong> `;
+    let content = `<strong>${msg.nickname || "Anonymous"} (${timeStr}):</strong> `;
     if(msg.text) content += msg.text + " ";
     if(msg.imageUrl) content += `<br><img class="chat-img" src="${msg.imageUrl}">`;
 
@@ -276,7 +269,11 @@ generateBtn.onclick = async ()=>{
   const userRef=ref(db,`users/${user.uid}/inviteCodes`);
   const snap=await get(userRef);
   const codes=snap.exists()?Object.keys(snap.val()):[];
-  if(codes.length>=6) return alert("You can only create 6 invite codes.");
+
+  // ✅ Admins have no limit
+  if(!ADMIN_EMAILS.includes(user.email) && codes.length>=6)
+    return alert("You can only create 6 invite codes.");
+
   const newCode=Math.random().toString(36).substring(2,8).toUpperCase();
   await set(ref(db,"inviteCodes/"+newCode),{used:false,creator:user.uid});
   await set(ref(db,`users/${user.uid}/inviteCodes/${newCode}`),{used:false,createdAt:Date.now()});
