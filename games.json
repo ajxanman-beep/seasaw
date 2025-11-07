@@ -100,10 +100,6 @@
     "path": "1/clabandoned32.html"
   },
   {
-    "label": "About",
-    "path": "Z-Kit-V1-Release/about.html"
-  },
-  {
     "label": "Absolutemadness",
     "path": "3/clabsolutemadness.html"
   },
@@ -302,10 +298,6 @@
   {
     "label": "Appleworm",
     "path": "8/clappleworm.html"
-  },
-  {
-    "label": "Apps",
-    "path": "Z-Kit-V1-Release/apps.html"
   },
   {
     "label": "Arceuslegend",
@@ -1816,10 +1808,6 @@
     "path": "10/clelectricman2.html"
   },
   {
-    "label": "Embed",
-    "path": "Z-Kit-V1-Release/embed.html"
-  },
-  {
     "label": "Enchain",
     "path": "13/clenchain.html"
   },
@@ -2316,16 +2304,8 @@
     "path": "11/clgalaga.html"
   },
   {
-    "label": "Game",
-    "path": "Z-Kit-V1-Release/game.html"
-  },
-  {
     "label": "Gameandwatchcollection",
     "path": "5/clgameandwatchcollection.html"
-  },
-  {
-    "label": "Games",
-    "path": "Z-Kit-V1-Release/games.html"
   },
   {
     "label": "Gangstabean",
@@ -2720,10 +2700,6 @@
     "path": "4/clhollowknight.html"
   },
   {
-    "label": "Home",
-    "path": "Z-Kit-V1-Release/home.html"
-  },
-  {
     "label": "Hotline Miami",
     "path": "17/Hotline Miami.html"
   },
@@ -2794,10 +2770,6 @@
   {
     "label": "Inclementemerald",
     "path": "15/clinclementemerald.html"
-  },
-  {
-    "label": "Index",
-    "path": "Z-Kit-V1-Release/index.html"
   },
   {
     "label": "Indiantrucksimiulator",
@@ -3030,10 +3002,6 @@
   {
     "label": "Laststand2",
     "path": "4/cllaststand2.html"
-  },
-  {
-    "label": "Launcher",
-    "path": "Z-Kit-V1-Release/launcher.html"
   },
   {
     "label": "Leaderstrike",
@@ -4840,10 +4808,6 @@
     "path": "15/clseamongrel.html"
   },
   {
-    "label": "Search",
-    "path": "Z-Kit-V1-Release/search.html"
-  },
-  {
     "label": "Secretofmana",
     "path": "14/clsecretofmana.html"
   },
@@ -6422,10 +6386,6 @@
   {
     "label": "Waverun",
     "path": "9/clwaverun.html"
-  },
-  {
-    "label": "Web",
-    "path": "Z-Kit-V1-Release/web.html"
   },
   {
     "label": "Webecomewhatwebehold",
