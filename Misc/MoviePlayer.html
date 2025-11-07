@@ -24,6 +24,7 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      flex-wrap: wrap;
     }
 
     button, input {
@@ -95,16 +96,15 @@
       background-color: #000;
     }
 
-    #uploadSection {
+    #addSection {
       margin-top: 15px;
       padding: 10px;
       background: #111;
       border-radius: 6px;
     }
 
-    #uploadInput {
-      color: white;
-      margin: 10px 0;
+    #addSection input {
+      margin: 5px 0;
     }
   </style>
 </head>
@@ -121,64 +121,46 @@
     <h2>Available Movies</h2>
     <div id="movie-buttons">Loading movies...</div>
 
-    <div id="uploadSection">
-      <h3>Upload New Movie</h3>
-      <input type="file" id="uploadInput" accept="video/*">
-      <button id="uploadBtn">Upload</button>
-      <p id="uploadStatus"></p>
+    <div id="addSection">
+      <h3>Add New Movie</h3>
+      <input type="text" id="newTitle" placeholder="Movie Title">
+      <input type="text" id="newID" placeholder="Google Drive File ID">
+      <button id="addBtn">Add Movie</button>
+      <p id="addStatus"></p>
     </div>
 
     <video id="player" controls></video>
   </div>
 
   <script>
-    const CLOUD_NAME = "dcbo4oozo";
-    const UPLOAD_PRESET = "dmy4wzqz";
-    const uploadInput = document.getElementById("uploadInput");
-    const uploadBtn = document.getElementById("uploadBtn");
-    const uploadStatus = document.getElementById("uploadStatus");
     const container = document.getElementById("movie-buttons");
     const player = document.getElementById("player");
     const searchInput = document.getElementById("search");
+    const addBtn = document.getElementById("addBtn");
+    const newTitle = document.getElementById("newTitle");
+    const newID = document.getElementById("newID");
+    const addStatus = document.getElementById("addStatus");
 
-    // Load existing videos
-    async function loadMovies() {
-      container.textContent = "Loading movies...";
-      try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/video/upload?max_results=100`, {
-          headers: { Authorization: "Basic " + btoa("api_key:api_secret") }
-        });
-        const data = await res.json();
-        if (!data.resources) {
-          container.textContent = "No movies found.";
-          return;
-        }
-
-        let movies = data.resources.map(m => ({
-          label: m.public_id.split("/").pop(),
-          url: `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/${m.public_id}.mp4`
-        }));
-
-        displayMovies(movies);
-
-        searchInput.addEventListener("input", () => {
-          const q = searchInput.value.toLowerCase();
-          const filtered = movies.filter(m => m.label.toLowerCase().includes(q));
-          displayMovies(filtered);
-        });
-      } catch (err) {
-        container.textContent = "Error loading movies. Upload a video to start.";
+    // Initial movie list (example)
+    let movies = [
+      {
+        label: "[S1.Ep2] Squid Game - Red Light, Green Light",
+        url: "https://drive.google.com/uc?export=download&id=1E_vTmvglW_IT1s2Je1NShr5aZTq4oDe-"
+      },
+      {
+        label: "[S1.Ep2] Squid Game - Hell",
+        url: "https://drive.google.com/uc?export=download&id=1bK7vrjRkJCyZO1E1-v-KfhXjaRSOhtDW"
       }
-    }
+    ];
 
-    function displayMovies(movies) {
+    function displayMovies(list) {
       container.innerHTML = "";
-      if (movies.length === 0) {
+      if (list.length === 0) {
         container.textContent = "No movies found.";
         return;
       }
-      movies.sort((a, b) => a.label.localeCompare(b.label));
-      movies.forEach(movie => {
+      list.sort((a, b) => a.label.localeCompare(b.label));
+      list.forEach(movie => {
         const btn = document.createElement("button");
         btn.textContent = movie.label;
         btn.className = "movie-btn";
@@ -190,41 +172,39 @@
       });
     }
 
-    // Upload video to Cloudinary
-    uploadBtn.onclick = async () => {
-      const file = uploadInput.files[0];
-      if (!file) return alert("Select a video first!");
-      uploadStatus.textContent = "Uploading...";
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", UPLOAD_PRESET);
+    // Display all movies on load
+    displayMovies(movies);
 
-      try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
-          method: "POST",
-          body: formData
-        });
-        const data = await res.json();
-        if (data.secure_url) {
-          uploadStatus.textContent = "Upload complete! Refreshing list...";
-          setTimeout(() => {
-            loadMovies();
-            uploadInput.value = "";
-            uploadStatus.textContent = "";
-          }, 2000);
-        } else {
-          uploadStatus.textContent = "Upload failed.";
-        }
-      } catch (err) {
-        uploadStatus.textContent = "Error: " + err.message;
+    // Search functionality
+    searchInput.addEventListener("input", () => {
+      const query = searchInput.value.toLowerCase();
+      const filtered = movies.filter(m => m.label.toLowerCase().includes(query));
+      displayMovies(filtered);
+    });
+
+    // Add new movie
+    addBtn.onclick = () => {
+      const title = newTitle.value.trim();
+      const id = newID.value.trim();
+      if (!title || !id) {
+        addStatus.textContent = "Please enter both title and file ID.";
+        return;
       }
+      const newMovie = {
+        label: title,
+        url: `https://drive.google.com/uc?export=download&id=${id}`
+      };
+      movies.push(newMovie);
+      displayMovies(movies);
+      addStatus.textContent = `"${title}" added!`;
+      newTitle.value = "";
+      newID.value = "";
     };
 
+    // Back button
     document.getElementById("backBtn").addEventListener("click", () => {
       window.location.href = "../index.html";
     });
-
-    loadMovies();
   </script>
 </body>
 </html>
