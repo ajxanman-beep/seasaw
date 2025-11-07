@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Chat Room — Gradient Admin Names</title>
+<title>Chat Room — Admin Controls</title>
 <style>
   :root {
     --bg: #121212;
     --card: #1f1f1f;
     --muted: rgba(255,255,255,0.7);
+    --accent: #0078ff;
   }
   body{
     margin:0;
@@ -22,7 +23,7 @@
   }
   .container{
     width:92%;
-    max-width:760px;
+    max-width:960px;
     background:var(--card);
     border-radius:12px;
     padding:18px;
@@ -42,12 +43,13 @@
     padding:10px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; outline:none; flex:1;
   }
   input[type="file"]{ padding:6px; }
-  button{ padding:10px 12px; border-radius:6px; border:none; cursor:pointer; background:#0078ff; color:white; }
+  button{ padding:10px 12px; border-radius:6px; border:none; cursor:pointer; background:var(--accent); color:white; }
   .muted{ color:var(--muted); font-size:0.95rem; }
   .delete-btn{ color:#ff6666; margin-left:10px; cursor:pointer; font-size:0.85rem; }
   .chat-img{ display:block; max-width:220px; max-height:220px; margin-top:6px; border-radius:6px; cursor:pointer; }
+  .chat-video{ display:block; max-width:320px; max-height:240px; margin-top:6px; border-radius:6px; cursor:pointer; }
   #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
-  #imgModal img{ max-width:94%; max-height:94%; border-radius:6px; }
+  #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
 
   /* Name rendering helpers */
   .name {
@@ -57,10 +59,7 @@
     background-clip:text;
     color:transparent;
   }
-  /* Non-animated gradient or solid (applied inline via style attribute) */
   .name.static { color:transparent; }
-
-  /* Animated gradient helpers */
   .name.animated {
     color:transparent;
     background-size: 200% 100%;
@@ -93,7 +92,20 @@
   .invite-row{ display:flex; gap:8px; align-items:center; margin-top:10px; }
 
   /* simple message block spacing */
-  .message { margin-bottom:10px; line-height:1.3; }
+  .message { margin-bottom:10px; line-height:1.3; padding:6px; border-radius:6px; }
+
+  /* admin controls */
+  #adminControlPanel{ display:none; margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; border:1px solid #3a3a3a; }
+  #userList{ margin-top:8px; }
+
+  /* theme preview */
+  .theme-swatch{ display:inline-block; width:36px; height:24px; border-radius:6px; border:1px solid #333; cursor:pointer; margin-right:6px; vertical-align:middle; }
+
+  /* responsive */
+  @media (max-width:720px){
+    #chatBox{ height:300px; }
+    .container{ padding:12px; }
+  }
 </style>
 </head>
 <body>
@@ -127,7 +139,7 @@
 
       <div id="inputArea">
         <input id="messageInput" type="text" placeholder="Type a message..." />
-        <input id="fileInput" type="file" accept="image/*,video/gif" />
+        <input id="fileInput" type="file" accept="image/*,video/*" />
         <button id="sendButton">Send</button>
         <button id="logoutBtn" style="background:#ff4444">Logout</button>
       </div>
@@ -156,10 +168,24 @@
         </div>
       </div>
 
+      <!-- Extended Admin Controls -->
+      <div id="adminControlPanel">
+        <strong>🛠 Admin Controls</strong>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+          <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
+          <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
+          <button id="themeBtn" style="background:#00cc88;">Change Chat Theme</button>
+          <button id="purgeBtn" style="background:#ff6666;">Purge All Messages</button>
+        </div>
+
+        <div id="userList" style="display:none; margin-top:12px;"></div>
+      </div>
+
     </div>
 
     <div id="imgModal" aria-hidden="true">
       <img id="modalImg" alt="Expanded"/>
+      <video id="modalVideo" controls style="display:none;"></video>
     </div>
 
   </div>
@@ -173,7 +199,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {
   getDatabase, ref, push, onChildAdded, onChildRemoved, remove,
-  query, orderByChild, off, set, get, update
+  query, orderByChild, off, set, get, update, onValue
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -204,6 +230,7 @@ const myCodesDiv = document.getElementById("myCodes");
 const fileInput = document.getElementById("fileInput");
 const imgModal = document.getElementById("imgModal");
 const modalImg = document.getElementById("modalImg");
+const modalVideo = document.getElementById("modalVideo");
 
 const adminPanel = document.getElementById("adminColorPanel");
 const colorStart = document.getElementById("colorStart");
@@ -239,8 +266,17 @@ function clearMessages(){
 document.getElementById("loginBtn").onclick = async () => {
   const email = document.getElementById("email").value.trim();
   const pass = document.getElementById("password").value;
-  try{ await signInWithEmailAndPassword(auth,email,pass); showError(""); }
-  catch(err){ showError(err.message); }
+  try{
+    const cred = await signInWithEmailAndPassword(auth,email,pass);
+    // check if banned
+    const userRef = ref(db,"users/"+cred.user.uid);
+    const snap = await get(userRef);
+    if(snap.exists() && snap.val().banned){
+      await signOut(auth);
+      return showError("You are banned from this chat.");
+    }
+    showError("");
+  }catch(err){ showError(err.message); }
 };
 
 document.getElementById("registerBtn").onclick = async () => {
@@ -253,10 +289,18 @@ document.getElementById("registerBtn").onclick = async () => {
     const snap = await get(codeRef);
     if(!snap.exists()) return showError("Invalid invite code.");
     if(snap.val().used) return showError("Invite code already used.");
+    // check banned emails
+    const bannedSnap = await get(ref(db,"banned"));
+    if(bannedSnap.exists()){
+      const bannedObj = bannedSnap.val();
+      if(Object.values(bannedObj).some(b => b.email === email)){
+        return showError("This email is banned.");
+      }
+    }
     await set(codeRef,{...snap.val(), used:true});
     const cred = await createUserWithEmailAndPassword(auth,email,pass);
     const nick = prompt("Choose a nickname:") || "Anonymous";
-    await set(ref(db,"users/"+cred.user.uid), { nickname: nick });
+    await set(ref(db,"users/"+cred.user.uid), { nickname: nick, email: email });
     showError("");
   }catch(err){
     showError(err.message);
@@ -265,16 +309,23 @@ document.getElementById("registerBtn").onclick = async () => {
 
 onAuthStateChanged(auth, async user => {
   if(user){
+    // check banned flag
+    const userRef = ref(db,"users/"+user.uid);
+    const snap = await get(userRef);
+    if(snap.exists() && snap.val().banned){
+      await signOut(auth);
+      return alert("You are banned.");
+    }
+
     authContainer.style.display = "none";
     chatContainer.style.display = "block";
     // load user profile
-    const userRef = ref(db,"users/"+user.uid);
-    const snap = await get(userRef);
     if(snap.exists()){
       currentNickname = snap.val().nickname || "Anonymous";
       // populate admin color inputs if admin and have color saved
       if(ADMIN_EMAILS.includes(user.email)){
         adminPanel.style.display = "block";
+        document.getElementById("adminControlPanel").style.display = "block";
         const col = snap.val().color || null;
         if(col){
           colorStart.value = col.start || colorStart.value;
@@ -286,10 +337,11 @@ onAuthStateChanged(auth, async user => {
         }
       } else {
         adminPanel.style.display = "none";
+        document.getElementById("adminControlPanel").style.display = "none";
       }
     } else {
-      // not found: hide admin panel
       adminPanel.style.display = "none";
+      document.getElementById("adminControlPanel").style.display = "none";
     }
     loadMessages();
   } else {
@@ -313,11 +365,18 @@ saveColorBtn.onclick = async () => {
 };
 
 /* Message send */
-function sendMessage(text="", imageUrl=""){
+async function sendMessage(text="", imageUrl=""){
   if(!text && !imageUrl) return;
   const user = auth.currentUser;
   if(!user) return alert("You must be signed in.");
-  push(ref(db,"messages"), {
+  const userSnap = await get(ref(db,"users/"+user.uid));
+  if(userSnap.exists()){
+    const u = userSnap.val();
+    if(u.kicked) return alert("You’ve been kicked. Please rejoin later.");
+    if(u.banned) return alert("You are banned.");
+    if(u.muted) return alert("You are muted and cannot send messages.");
+  }
+  await push(ref(db,"messages"), {
     uid: user.uid,
     email: user.email,
     nickname: currentNickname,
@@ -331,16 +390,21 @@ function sendMessage(text="", imageUrl=""){
 sendBtn.onclick = ()=> sendMessage(msgInput.value);
 msgInput.addEventListener("keypress", e => { if(e.key === "Enter") sendMessage(msgInput.value); });
 
+/* File upload to Cloudinary */
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   if(!file) return;
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "z1d4s4al"); // your cloudinary preset
+  formData.append("upload_preset", "z1d4s4al"); // user's preset
   try{
     const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method:"POST", body:formData });
     const data = await res.json();
-    if(data.secure_url) sendMessage("", data.secure_url);
+    if(data.secure_url){
+      // if video mime type, mark as video
+      const isVideo = data.resource_type && data.resource_type === "video" || file.type.startsWith("video/");
+      await sendMessage("", data.secure_url);
+    }
     fileInput.value = "";
   }catch(err){
     alert("Upload failed: " + err.message);
@@ -395,20 +459,15 @@ function loadMessages(){
             const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
 
             if(animated){
-              // animated: use CSS variables and animated class
               nameHtml = `<span class="name animated" style="--speed:${speed}; background:linear-gradient(90deg, ${start}, ${end});">${msg.nickname || "Anonymous"}${suffix}</span>`;
             } else {
-              // static: gradient or solid
               if(start === end){
-                // solid color (single)
                 nameHtml = `<span class="name static" style="background:linear-gradient(90deg, ${start}, ${start}); -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
               } else {
-                // static gradient
                 nameHtml = `<span class="name static" style="background:linear-gradient(90deg, ${start}, ${end});">${msg.nickname || "Anonymous"}${suffix}</span>`;
               }
             }
           } else {
-            // no color saved: default plain text
             nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
           }
         } else {
@@ -419,10 +478,24 @@ function loadMessages(){
       }
     }
 
+    // system message styling
+    if(msg.uid === "SYSTEM"){
+      wrapper.style.background = "#2b2b2b";
+      wrapper.style.borderLeft = "4px solid #ffaa00";
+      wrapper.style.padding = "8px";
+    }
+
     // build message content
     let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
     if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
-    if(msg.imageUrl) content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+    if(msg.imageUrl){
+      const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
+      if(isVideo){
+        content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
+      } else {
+        content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+      }
+    }
 
     wrapper.innerHTML = content;
 
@@ -443,10 +516,20 @@ function loadMessages(){
     chatBox.appendChild(wrapper);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // image modal click
+    // image/video modal click
     const img = wrapper.querySelector(".chat-img");
+    const vid = wrapper.querySelector("video.chat-video");
     if(img) img.onclick = () => {
+      modalVideo.style.display = "none";
+      modalImg.style.display = "block";
       modalImg.src = img.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+    if(vid) vid.onclick = () => {
+      modalImg.style.display = "none";
+      modalVideo.style.display = "block";
+      modalVideo.src = vid.src;
       imgModal.style.display = "flex";
       imgModal.setAttribute("aria-hidden","false");
     };
@@ -472,9 +555,14 @@ function escapeHtml(text){
 }
 
 /* modal hide */
-imgModal.onclick = () => {
+imgModal.onclick = (e) => {
+  // close unless clicking the video controls
+  if(e.target === modalVideo) return;
   imgModal.style.display = "none";
   modalImg.src = "";
+  modalVideo.src = "";
+  modalImg.style.display = "block";
+  modalVideo.style.display = "none";
   imgModal.setAttribute("aria-hidden","true");
 };
 
@@ -533,6 +621,137 @@ chatBox.addEventListener('DOMNodeInserted', e => {
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 });
+
+/* ADMIN: View all users and manage them */
+const userListDiv = document.getElementById("userList");
+document.getElementById("viewUsersBtn").onclick = async () => {
+  if(userListDiv.style.display === "none" || userListDiv.style.display === ""){
+    const snap = await get(ref(db, "users"));
+    if(!snap.exists()) return alert("No users found.");
+    const users = snap.val();
+    userListDiv.innerHTML = "<strong>Users:</strong><br>";
+
+    Object.entries(users).forEach(([uid, data]) => {
+      const isMuted = data.muted || false;
+      const isKicked = data.kicked || false;
+      const isBanned = data.banned || false;
+      const email = data.email || "";
+      const nick = data.nickname || "Unnamed";
+      userListDiv.innerHTML += `
+        <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+          <div style="flex:1;">
+            <strong>${nick}</strong><div class="small">${email}</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button onclick="kickUser('${uid}')" style="background:#ff5555;">Kick</button>
+            <button onclick="muteUser('${uid}', ${!isMuted})" style="background:${isMuted ? '#00cc66' : '#ffaa00'};">
+              ${isMuted ? "Unmute" : "Mute"}
+            </button>
+            <button onclick="banUser('${uid}', '${email}')" style="background:#aa00ff;">Ban</button>
+          </div>
+        </div>
+      `;
+    });
+    userListDiv.style.display = "block";
+  } else {
+    userListDiv.style.display = "none";
+  }
+};
+
+// kick user (marks kicked flag)
+window.kickUser = async (uid) => {
+  if(!confirm("Kick this user?")) return;
+  await update(ref(db, "users/"+uid), { kicked: true });
+  alert("User kicked. They will be disconnected shortly.");
+};
+
+// mute/unmute user
+window.muteUser = async (uid, mute) => {
+  await update(ref(db, "users/"+uid), { muted: mute });
+  alert(`User has been ${mute ? "muted" : "unmuted"}.`);
+};
+
+// ban user
+window.banUser = async (uid, email) => {
+  if(!confirm(`Permanently ban ${email || "this user"}?`)) return;
+  await update(ref(db, "users/"+uid), { banned: true });
+  await set(ref(db, "banned/"+uid), { email: email || "unknown", bannedAt: Date.now() });
+  alert("User has been banned.");
+};
+
+/* Broadcast system messages */
+document.getElementById("broadcastBtn").onclick = async () => {
+  const msg = prompt("Enter a system message to broadcast:");
+  if(!msg) return;
+  await push(ref(db, "messages"), {
+    uid: "SYSTEM",
+    email: "system@chat",
+    nickname: "📢 System",
+    text: msg,
+    timestamp: Date.now()
+  });
+};
+
+/* Purge all messages (admin) */
+document.getElementById("purgeBtn").onclick = async () => {
+  if(!confirm("Purge ALL messages? This cannot be undone.")) return;
+  // remove entire messages node
+  await remove(ref(db,"messages"));
+  alert("All messages purged.");
+};
+
+/* Theme controls: allow admin to set a global theme saved in DB */
+document.getElementById("themeBtn").onclick = async () => {
+  const newBg = prompt("Enter background CSS value (e.g. #121212 or linear-gradient(90deg,#111,#444)):", getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || "#121212");
+  if(!newBg) return;
+  document.documentElement.style.setProperty('--bg', newBg);
+  await set(ref(db, "globalTheme"), { bg: newBg, updatedAt: Date.now() });
+};
+
+/* Listen for global theme updates */
+onValue(ref(db, "globalTheme"), snap => {
+  if(snap.exists()){
+    const theme = snap.val();
+    if(theme.bg) document.documentElement.style.setProperty('--bg', theme.bg);
+  }
+});
+
+/* Prevent banned users from registering by email snapshot is done in register handler */
+
+/* Listen for kicked users and force sign out if current user is kicked */
+onAuthStateChanged(auth, async user => {
+  if(!user) return;
+  const snap = await get(ref(db,"users/"+user.uid));
+  if(snap.exists()){
+    const u = snap.val();
+    if(u.kicked){
+      try{ await signOut(auth); alert("You have been kicked by an admin."); }catch(e){}
+    }
+    if(u.banned){
+      try{ await signOut(auth); alert("You are banned."); }catch(e){}
+    }
+  }
+});
+
+/* small listener to keep client up to date when their user flags change */
+function watchCurrentUserFlags(){
+  const user = auth.currentUser;
+  if(!user) return;
+  const userRefLocal = ref(db,"users/"+user.uid);
+  onValue(userRefLocal, snap => {
+    if(!snap.exists()) return;
+    const u = snap.val();
+    if(u.kicked){
+      signOut(auth).catch(()=>{});
+      alert("You have been kicked by an admin.");
+    }
+    if(u.banned){
+      signOut(auth).catch(()=>{});
+      alert("You are banned.");
+    }
+  });
+}
+onAuthStateChanged(auth, u => { if(u) watchCurrentUserFlags(); });
 
 </script>
 </body>
