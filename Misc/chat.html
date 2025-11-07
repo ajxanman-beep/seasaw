@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Chat Room — Admin Controls</title>
+<title>Chat Room — Admin Controls (Updated)</title>
 <style>
   :root {
     --bg: #121212;
@@ -23,7 +23,7 @@
   }
   .container{
     width:92%;
-    max-width:960px;
+    max-width:980px;
     background:var(--card);
     border-radius:12px;
     padding:18px;
@@ -51,17 +51,19 @@
   #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
   #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
 
-  /* Name rendering helpers */
+  /* Name rendering helpers - fixed gradient & animation support */
   .name {
     font-weight:700;
     display:inline-block;
     -webkit-background-clip:text;
     background-clip:text;
     color:transparent;
+    -webkit-text-fill-color: transparent;
   }
-  .name.static { color:transparent; }
+  .name.static { color:transparent; -webkit-text-fill-color: transparent; }
   .name.animated {
     color:transparent;
+    -webkit-text-fill-color: transparent;
     background-size: 200% 100%;
     background-repeat: no-repeat;
     -webkit-background-clip: text;
@@ -96,7 +98,10 @@
 
   /* admin controls */
   #adminControlPanel{ display:none; margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; border:1px solid #3a3a3a; }
-  #userList{ margin-top:8px; }
+  #userList{ margin-top:8px; max-height:260px; overflow:auto; }
+
+  /* db manager */
+  #dbManager{ display:none; margin-top:10px; background:#222; padding:8px; border-radius:8px; border:1px solid #333; }
 
   /* theme preview */
   .theme-swatch{ display:inline-block; width:36px; height:24px; border-radius:6px; border:1px solid #333; cursor:pointer; margin-right:6px; vertical-align:middle; }
@@ -174,11 +179,18 @@
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
           <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
           <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
+          <button id="dbManagerBtn" style="background:#aa66ff;">Manage Database</button>
           <button id="themeBtn" style="background:#00cc88;">Change Chat Theme</button>
           <button id="purgeBtn" style="background:#ff6666;">Purge All Messages</button>
         </div>
 
         <div id="userList" style="display:none; margin-top:12px;"></div>
+
+        <div id="dbManager" style="display:none; margin-top:12px;">
+          <strong>Realtime DB Manager</strong>
+          <div class="small">View top-level nodes and delete nodes. Dangerous: use with care.</div>
+          <div id="dbNodes" style="margin-top:8px;"></div>
+        </div>
       </div>
 
     </div>
@@ -401,8 +413,6 @@ fileInput.addEventListener("change", async () => {
     const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method:"POST", body:formData });
     const data = await res.json();
     if(data.secure_url){
-      // if video mime type, mark as video
-      const isVideo = data.resource_type && data.resource_type === "video" || file.type.startsWith("video/");
       await sendMessage("", data.secure_url);
     }
     fileInput.value = "";
@@ -458,14 +468,12 @@ function loadMessages(){
             const animated = !!u.color.animated;
             const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
 
+            const bg = `linear-gradient(90deg, ${start}, ${end})`;
             if(animated){
-              nameHtml = `<span class="name animated" style="--speed:${speed}; background:linear-gradient(90deg, ${start}, ${end});">${msg.nickname || "Anonymous"}${suffix}</span>`;
+              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
             } else {
-              if(start === end){
-                nameHtml = `<span class="name static" style="background:linear-gradient(90deg, ${start}, ${start}); -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
-              } else {
-                nameHtml = `<span class="name static" style="background:linear-gradient(90deg, ${start}, ${end});">${msg.nickname || "Anonymous"}${suffix}</span>`;
-              }
+              // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
+              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
             }
           } else {
             nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
@@ -499,10 +507,12 @@ function loadMessages(){
 
     wrapper.innerHTML = content;
 
-    // delete button if owner or admin
+    // delete button if owner or admin (admins cannot delete other admins' messages)
     const currentUser = auth.currentUser;
     if(currentUser){
-      if(msg.uid === currentUser.uid || ADMIN_EMAILS.includes(currentUser.email)){
+      const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
+      const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
+      if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
         const del = document.createElement("span");
         del.className = "delete-btn";
         del.textContent = "[delete]";
@@ -622,7 +632,7 @@ chatBox.addEventListener('DOMNodeInserted', e => {
   }
 });
 
-/* ADMIN: View all users and manage them */
+/* ADMIN: View all users and manage them (now with unkick/unban and admin protections) */
 const userListDiv = document.getElementById("userList");
 document.getElementById("viewUsersBtn").onclick = async () => {
   if(userListDiv.style.display === "none" || userListDiv.style.display === ""){
@@ -631,24 +641,39 @@ document.getElementById("viewUsersBtn").onclick = async () => {
     const users = snap.val();
     userListDiv.innerHTML = "<strong>Users:</strong><br>";
 
+    const currentUser = auth.currentUser;
+    const currentIsAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email);
+
     Object.entries(users).forEach(([uid, data]) => {
       const isMuted = data.muted || false;
       const isKicked = data.kicked || false;
       const isBanned = data.banned || false;
       const email = data.email || "";
       const nick = data.nickname || "Unnamed";
+      const targetIsAdmin = ADMIN_EMAILS.includes(email);
+
+      // build controls but disable actions that affect other admins
+      const controls = [];
+      if(!targetIsAdmin || (currentUser && currentUser.uid === uid)){
+        // Kick / Unkick
+        controls.push(`<button onclick="toggleKick('${uid}', ${isKicked})" style="background:${isKicked ? '#00cc66' : '#ff5555'};">${isKicked ? 'Unkick' : 'Kick'}</button>`);
+        // Mute / Unmute
+        controls.push(`<button onclick="toggleMute('${uid}', ${isMuted})" style="background:${isMuted ? '#00cc66' : '#ffaa00'};">${isMuted ? 'Unmute' : 'Mute'}</button>`);
+        // Ban / Unban
+        controls.push(`<button onclick="toggleBan('${uid}', '${email}', ${isBanned})" style="background:${isBanned ? '#00cc66' : '#aa00ff'};">${isBanned ? 'Unban' : 'Ban'}</button>`);
+        // Auth actions (server-side) - queued
+        controls.push(`<button onclick="requestAuthAction('${uid}','${email}','disable')" style="background:#cc6633;">Disable Auth</button>`);
+        controls.push(`<button onclick="requestAuthAction('${uid}','${email}','delete')" style="background:#aa3333;">Delete Auth</button>`);
+      } else {
+        controls.push(`<span class="small">Admin account — actions disabled</span>`);
+      }
+
       userListDiv.innerHTML += `
         <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
           <div style="flex:1;">
             <strong>${nick}</strong><div class="small">${email}</div>
           </div>
-          <div style="display:flex; gap:6px;">
-            <button onclick="kickUser('${uid}')" style="background:#ff5555;">Kick</button>
-            <button onclick="muteUser('${uid}', ${!isMuted})" style="background:${isMuted ? '#00cc66' : '#ffaa00'};">
-              ${isMuted ? "Unmute" : "Mute"}
-            </button>
-            <button onclick="banUser('${uid}', '${email}')" style="background:#aa00ff;">Ban</button>
-          </div>
+          <div style="display:flex; gap:6px;">${controls.join('')}</div>
         </div>
       `;
     });
@@ -658,25 +683,55 @@ document.getElementById("viewUsersBtn").onclick = async () => {
   }
 };
 
-// kick user (marks kicked flag)
-window.kickUser = async (uid) => {
-  if(!confirm("Kick this user?")) return;
-  await update(ref(db, "users/"+uid), { kicked: true });
-  alert("User kicked. They will be disconnected shortly.");
+// toggle kick/unkick
+window.toggleKick = async (uid, currentlyKicked) => {
+  const newVal = !currentlyKicked;
+  await update(ref(db, "users/"+uid), { kicked: newVal });
+  alert(newVal ? "User kicked." : "User un-kicked.");
+  document.getElementById("viewUsersBtn").click(); // refresh
 };
 
-// mute/unmute user
-window.muteUser = async (uid, mute) => {
-  await update(ref(db, "users/"+uid), { muted: mute });
-  alert(`User has been ${mute ? "muted" : "unmuted"}.`);
+// toggle mute/unmute
+window.toggleMute = async (uid, currentlyMuted) => {
+  const newVal = !currentlyMuted;
+  await update(ref(db, "users/"+uid), { muted: newVal });
+  alert(newVal ? "User muted." : "User unmuted.");
+  document.getElementById("viewUsersBtn").click(); // refresh
 };
 
-// ban user
-window.banUser = async (uid, email) => {
-  if(!confirm(`Permanently ban ${email || "this user"}?`)) return;
-  await update(ref(db, "users/"+uid), { banned: true });
-  await set(ref(db, "banned/"+uid), { email: email || "unknown", bannedAt: Date.now() });
-  alert("User has been banned.");
+// toggle ban/unban
+window.toggleBan = async (uid, email, currentlyBanned) => {
+  const newVal = !currentlyBanned;
+  if(newVal){
+    if(!confirm(`Permanently ban ${email || 'this user'}?`)) return;
+    await update(ref(db, "users/"+uid), { banned: true });
+    await set(ref(db, "banned/"+uid), { email: email || "unknown", bannedAt: Date.now() });
+    alert("User banned.");
+  } else {
+    if(!confirm(`Unban ${email || 'this user'}?`)) return;
+    await update(ref(db, "users/"+uid), { banned: false });
+    await remove(ref(db, "banned/"+uid));
+    alert("User unbanned.");
+  }
+  document.getElementById("viewUsersBtn").click(); // refresh
+};
+
+/* Admin -> request Auth actions (disable/delete) that must be processed server-side with Admin SDK.
+   We queue the request under /adminActions and include requester info.
+*/
+window.requestAuthAction = async (uid, email, actionType) => {
+  const requester = auth.currentUser;
+  if(!requester) return alert("Sign in first.");
+  if(!confirm(`Queue ${actionType} for ${email || uid}? This must be processed by a trusted server (Cloud Function). Continue?`)) return;
+  await push(ref(db, "adminActions"), {
+    type: actionType,
+    targetUid: uid,
+    targetEmail: email,
+    requestedByUid: requester.uid,
+    requestedByEmail: requester.email,
+    timestamp: Date.now()
+  });
+  alert("Auth action queued. Deploy a Cloud Function / server to process items in /adminActions using the Firebase Admin SDK.");
 };
 
 /* Broadcast system messages */
@@ -695,10 +750,49 @@ document.getElementById("broadcastBtn").onclick = async () => {
 /* Purge all messages (admin) */
 document.getElementById("purgeBtn").onclick = async () => {
   if(!confirm("Purge ALL messages? This cannot be undone.")) return;
-  // remove entire messages node
   await remove(ref(db,"messages"));
   alert("All messages purged.");
 };
+
+/* Database manager UI */
+document.getElementById("dbManagerBtn").onclick = async () => {
+  const dbManager = document.getElementById("dbManager");
+  if(dbManager.style.display === "none" || dbManager.style.display === ""){
+    dbManager.style.display = "block";
+    const rootSnap = await get(ref(db, "/"));
+    const nodesDiv = document.getElementById("dbNodes");
+    nodesDiv.innerHTML = "";
+    if(!rootSnap.exists()) return nodesDiv.innerText = "No data in DB.";
+    const obj = rootSnap.val();
+    Object.keys(obj).forEach(key => {
+      nodesDiv.innerHTML += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+        <div><strong>${key}</strong> <span class="small">(${typeof obj[key]})</span></div>
+        <div>
+          <button onclick="viewNode('${key}')">View</button>
+          <button onclick="deleteNode('${key}')" style="background:#aa3333;">Delete</button>
+        </div>
+      </div>`;
+    });
+  } else {
+    dbManager.style.display = "none";
+  }
+};
+
+window.viewNode = async (key) => {
+  const snap = await get(ref(db, key));
+  if(!snap.exists()) return alert("No data at that node.");
+  const pretty = JSON.stringify(snap.val(), null, 2);
+  const win = window.open("");
+  win.document.write(`<pre>${escapeHtml(pretty)}</pre>`);
+};
+
+window.deleteNode = async (key) => {
+  if(!confirm(`Delete node "${key}" from database? This is irreversible.`)) return;
+  await remove(ref(db, key));
+  alert(`Deleted node "${key}".`);
+  document.getElementById("dbManagerBtn").click(); // refresh
+};
+
 
 /* Theme controls: allow admin to set a global theme saved in DB */
 document.getElementById("themeBtn").onclick = async () => {
@@ -716,9 +810,7 @@ onValue(ref(db, "globalTheme"), snap => {
   }
 });
 
-/* Prevent banned users from registering by email snapshot is done in register handler */
-
-/* Listen for kicked users and force sign out if current user is kicked */
+/* Listen for kicked/banned flags and force sign out if current user is affected */
 onAuthStateChanged(auth, async user => {
   if(!user) return;
   const snap = await get(ref(db,"users/"+user.uid));
