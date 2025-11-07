@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Google Drive Movie Player</title>
+  <title>Movie Player</title>
   <style>
     body { background-color: black; color: white; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
     .top-bar { display:flex; justify-content:center; align-items:center; gap:10px; padding:15px; background-color:#000; border-bottom:2px solid #222; flex-wrap:wrap;}
@@ -41,8 +41,8 @@
     async function loadMovies() {
       container.textContent = "Loading movies...";
       try {
-        // ✅ Direct download link from your Google Drive JSON
-        const res = await fetch("https://drive.google.com/uc?export=download&id=17kaGF32pdv4axhQyka0AI1-FC33JlgtL");
+        // ✅ Use your GitHub Gist raw JSON URL
+        const res = await fetch("https://gist.githubusercontent.com/ajxanman-beep/19e0dc37ea7d2a7a3b680a5d89a18243/raw/movies.json");
         const data = await res.json();
 
         // Convert Google Drive IDs to direct links for playback
