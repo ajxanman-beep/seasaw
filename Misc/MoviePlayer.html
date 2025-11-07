@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Movie Player</title>
   <style>
     body {
@@ -94,6 +94,18 @@
       border-radius: 6px;
       background-color: #000;
     }
+
+    #uploadSection {
+      margin-top: 15px;
+      padding: 10px;
+      background: #111;
+      border-radius: 6px;
+    }
+
+    #uploadInput {
+      color: white;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
@@ -109,50 +121,110 @@
     <h2>Available Movies</h2>
     <div id="movie-buttons">Loading movies...</div>
 
+    <div id="uploadSection">
+      <h3>Upload New Movie</h3>
+      <input type="file" id="uploadInput" accept="video/*">
+      <button id="uploadBtn">Upload</button>
+      <p id="uploadStatus"></p>
+    </div>
+
     <video id="player" controls></video>
   </div>
 
   <script>
-  fetch('Movies/movies.json')
-    .then(res => res.json())
-    .then(movies => {
-      const container = document.getElementById('movie-buttons');
-      const searchInput = document.getElementById('search');
-      const player = document.getElementById('player');
+    const CLOUD_NAME = "dcbo4oozo";
+    const UPLOAD_PRESET = "dmy4wzqz";
+    const uploadInput = document.getElementById("uploadInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const container = document.getElementById("movie-buttons");
+    const player = document.getElementById("player");
+    const searchInput = document.getElementById("search");
 
-      // Sort movies alphabetically
-      movies.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true }));
-
-      function displayMovies(filtered) {
-        container.innerHTML = '';
-        if (filtered.length === 0) {
-          container.textContent = 'No movies found.';
+    // Load existing videos
+    async function loadMovies() {
+      container.textContent = "Loading movies...";
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/video/upload?max_results=100`, {
+          headers: { Authorization: "Basic " + btoa("api_key:api_secret") }
+        });
+        const data = await res.json();
+        if (!data.resources) {
+          container.textContent = "No movies found.";
           return;
         }
-        filtered.forEach(movie => {
-          const btn = document.createElement('button');
-          btn.textContent = movie.label;
-          btn.className = 'movie-btn';
-          btn.onclick = () => {
-            player.src = movie.path;
-            player.play();
-          };
-          container.appendChild(btn);
+
+        let movies = data.resources.map(m => ({
+          label: m.public_id.split("/").pop(),
+          url: `https://res.cloudinary.com/${CLOUD_NAME}/video/upload/${m.public_id}.mp4`
+        }));
+
+        displayMovies(movies);
+
+        searchInput.addEventListener("input", () => {
+          const q = searchInput.value.toLowerCase();
+          const filtered = movies.filter(m => m.label.toLowerCase().includes(q));
+          displayMovies(filtered);
         });
+      } catch (err) {
+        container.textContent = "Error loading movies. Upload a video to start.";
       }
+    }
 
-      displayMovies(movies);
-
-      searchInput.addEventListener('input', () => {
-        const q = searchInput.value.toLowerCase();
-        const filtered = movies.filter(m => m.label.toLowerCase().includes(q));
-        displayMovies(filtered);
+    function displayMovies(movies) {
+      container.innerHTML = "";
+      if (movies.length === 0) {
+        container.textContent = "No movies found.";
+        return;
+      }
+      movies.sort((a, b) => a.label.localeCompare(b.label));
+      movies.forEach(movie => {
+        const btn = document.createElement("button");
+        btn.textContent = movie.label;
+        btn.className = "movie-btn";
+        btn.onclick = () => {
+          player.src = movie.url;
+          player.play();
+        };
+        container.appendChild(btn);
       });
+    }
+
+    // Upload video to Cloudinary
+    uploadBtn.onclick = async () => {
+      const file = uploadInput.files[0];
+      if (!file) return alert("Select a video first!");
+      uploadStatus.textContent = "Uploading...";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", UPLOAD_PRESET);
+
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        if (data.secure_url) {
+          uploadStatus.textContent = "Upload complete! Refreshing list...";
+          setTimeout(() => {
+            loadMovies();
+            uploadInput.value = "";
+            uploadStatus.textContent = "";
+          }, 2000);
+        } else {
+          uploadStatus.textContent = "Upload failed.";
+        }
+      } catch (err) {
+        uploadStatus.textContent = "Error: " + err.message;
+      }
+    };
+
+    document.getElementById("backBtn").addEventListener("click", () => {
+      window.location.href = "../index.html";
     });
 
-  document.getElementById('backBtn').addEventListener('click', () => {
-    window.location.href = '../index.html';
-  });
+    loadMovies();
   </script>
 </body>
 </html>
