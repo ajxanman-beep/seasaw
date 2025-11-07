@@ -41,11 +41,11 @@
     async function loadMovies() {
       container.textContent = "Loading movies...";
       try {
-        // Replace this URL with your direct JSON link from Drive
-        const res = await fetch("https://drive.google.com/file/d/17kaGF32pdv4axhQyka0AI1-FC33JlgtL/view?usp=sharing");
+        // ✅ Direct download link from your Google Drive JSON
+        const res = await fetch("https://drive.google.com/uc?export=download&id=17kaGF32pdv4axhQyka0AI1-FC33JlgtL");
         const data = await res.json();
 
-        // Convert Google Drive IDs to direct links
+        // Convert Google Drive IDs to direct links for playback
         movies = data.map(m => ({
           label: m.label,
           url: `https://drive.google.com/uc?export=download&id=${m.id}`
