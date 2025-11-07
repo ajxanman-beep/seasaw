@@ -2,114 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Movie Player</title>
+  <title>Google Drive Movie Player</title>
   <style>
-    body {
-      background-color: black;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      padding: 15px;
-      background-color: #000;
-      border-bottom: 2px solid #222;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      flex-wrap: wrap;
-    }
-
-    button, input {
-      border: none;
-      border-radius: 4px;
-      padding: 6px 10px;
-      font-size: 14px;
-    }
-
-    #backBtn {
-      background-color: #005eff;
-      color: white;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    #backBtn:hover {
-      background-color: #0074ff;
-    }
-
-    #search {
-      background-color: #002bff;
-      color: white;
-      width: 150px;
-      outline: none;
-    }
-
-    .content {
-      background-color: #0000a8;
-      margin: 20px auto;
-      padding: 20px;
-      width: 80%;
-      max-width: 800px;
-      border-radius: 6px;
-    }
-
-    #movie-buttons {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 10px;
-    }
-
-    .movie-btn {
-      background-color: #3355ff;
-      color: white;
-      border: none;
-      padding: 8px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.2s;
-      white-space: normal;
-      word-wrap: break-word;
-      overflow-wrap: anywhere;
-      line-height: 1.2;
-      font-size: 14px;
-      box-sizing: border-box;
-      min-height: 40px;
-    }
-
-    .movie-btn:hover {
-      background-color: #1e40ff;
-    }
-
-    video {
-      margin-top: 20px;
-      width: 100%;
-      max-height: 70vh;
-      border-radius: 6px;
-      background-color: #000;
-    }
-
-    #addSection {
-      margin-top: 15px;
-      padding: 10px;
-      background: #111;
-      border-radius: 6px;
-    }
-
-    #addSection input {
-      margin: 5px 0;
-    }
+    body { background-color: black; color: white; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
+    .top-bar { display:flex; justify-content:center; align-items:center; gap:10px; padding:15px; background-color:#000; border-bottom:2px solid #222; flex-wrap:wrap;}
+    button,input { border:none; border-radius:4px; padding:6px 10px; font-size:14px; }
+    #backBtn { background-color:#005eff; color:white; cursor:pointer; }
+    #backBtn:hover { background-color:#0074ff; }
+    #search { background-color:#002bff; color:white; width:150px; outline:none; }
+    .content { background-color:#0000a8; margin:20px auto; padding:20px; width:80%; max-width:800px; border-radius:6px; }
+    #movie-buttons { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:10px; }
+    .movie-btn { background-color:#3355ff; color:white; border:none; padding:8px 10px; border-radius:4px; cursor:pointer; line-height:1.2; font-size:14px; min-height:40px; }
+    .movie-btn:hover { background-color:#1e40ff; }
+    video { margin-top:20px; width:100%; max-height:70vh; border-radius:6px; background-color:#000; }
   </style>
 </head>
 <body>
-
   <div class="top-bar">
     <button id="backBtn">← Back</button>
     <h1>Movie Player</h1>
@@ -120,15 +28,6 @@
   <div class="content">
     <h2>Available Movies</h2>
     <div id="movie-buttons">Loading movies...</div>
-
-    <div id="addSection">
-      <h3>Add New Movie</h3>
-      <input type="text" id="newTitle" placeholder="Movie Title">
-      <input type="text" id="newID" placeholder="Google Drive File ID">
-      <button id="addBtn">Add Movie</button>
-      <p id="addStatus"></p>
-    </div>
-
     <video id="player" controls></video>
   </div>
 
@@ -136,75 +35,55 @@
     const container = document.getElementById("movie-buttons");
     const player = document.getElementById("player");
     const searchInput = document.getElementById("search");
-    const addBtn = document.getElementById("addBtn");
-    const newTitle = document.getElementById("newTitle");
-    const newID = document.getElementById("newID");
-    const addStatus = document.getElementById("addStatus");
 
-    // Initial movie list (example)
-    let movies = [
-      {
-        label: "[S1.Ep2] Squid Game - Red Light, Green Light",
-        url: "https://drive.google.com/uc?export=download&id=1E_vTmvglW_IT1s2Je1NShr5aZTq4oDe-"
-      },
-      {
-        label: "[S1.Ep2] Squid Game - Hell",
-        url: "https://drive.google.com/uc?export=download&id=1bK7vrjRkJCyZO1E1-v-KfhXjaRSOhtDW"
+    let movies = [];
+
+    async function loadMovies() {
+      container.textContent = "Loading movies...";
+      try {
+        // Replace this URL with your direct JSON link from Drive
+        const res = await fetch("https://drive.google.com/uc?export=download&id=17kaGF32pdv4axhQyka0AI1-FC33JlgtL");
+        const data = await res.json();
+
+        // Convert Google Drive IDs to direct links
+        movies = data.map(m => ({
+          label: m.label,
+          url: `https://drive.google.com/uc?export=download&id=${m.id}`
+        }));
+
+        displayMovies(movies);
+
+        // Search functionality
+        searchInput.addEventListener("input", () => {
+          const q = searchInput.value.toLowerCase();
+          const filtered = movies.filter(m => m.label.toLowerCase().includes(q));
+          displayMovies(filtered);
+        });
+
+      } catch (err) {
+        container.textContent = "Error loading movies.";
+        console.error(err);
       }
-    ];
+    }
 
     function displayMovies(list) {
       container.innerHTML = "";
-      if (list.length === 0) {
-        container.textContent = "No movies found.";
-        return;
-      }
-      list.sort((a, b) => a.label.localeCompare(b.label));
+      if(list.length === 0) { container.textContent = "No movies found."; return; }
+      list.sort((a,b)=>a.label.localeCompare(b.label));
       list.forEach(movie => {
         const btn = document.createElement("button");
         btn.textContent = movie.label;
         btn.className = "movie-btn";
-        btn.onclick = () => {
-          player.src = movie.url;
-          player.play();
-        };
+        btn.onclick = () => { player.src = movie.url; player.play(); };
         container.appendChild(btn);
       });
     }
 
-    // Display all movies on load
-    displayMovies(movies);
-
-    // Search functionality
-    searchInput.addEventListener("input", () => {
-      const query = searchInput.value.toLowerCase();
-      const filtered = movies.filter(m => m.label.toLowerCase().includes(query));
-      displayMovies(filtered);
-    });
-
-    // Add new movie
-    addBtn.onclick = () => {
-      const title = newTitle.value.trim();
-      const id = newID.value.trim();
-      if (!title || !id) {
-        addStatus.textContent = "Please enter both title and file ID.";
-        return;
-      }
-      const newMovie = {
-        label: title,
-        url: `https://drive.google.com/uc?export=download&id=${id}`
-      };
-      movies.push(newMovie);
-      displayMovies(movies);
-      addStatus.textContent = `"${title}" added!`;
-      newTitle.value = "";
-      newID.value = "";
-    };
-
-    // Back button
     document.getElementById("backBtn").addEventListener("click", () => {
       window.location.href = "../index.html";
     });
+
+    loadMovies();
   </script>
 </body>
 </html>
