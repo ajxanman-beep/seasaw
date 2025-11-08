@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Chat Room)</title>
+<title>Chat Room — Admin Controls</title>
 <style>
   :root {
     --bg: #121212;
@@ -51,6 +51,8 @@
   #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
   #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
 
+  /* Admin color panel removed - we don't need name colors anymore */
+
   /* Admin controls */
   #adminControlPanel{ display:none; margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; border:1px solid #3a3a3a; }
   #userList{ margin-top:8px; max-height:260px; overflow:auto; }
@@ -86,12 +88,12 @@
     </div>
 
     <div id="chatContainer" style="display:none;">
-      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="top-row">
         <h2 style="margin:0">Chat Room</h2>
         <div style="display:flex;gap:8px;align-items:center;">
           <button id="generateInviteBtn" style="background:#00cc66">Generate Invite</button>
           <button id="viewCodesBtn" style="background:#ffaa00">View Invite Codes</button>
-          <div id="myCodes" class="muted" style="display:none;"></div>
+          <div id="myCodes" class="small" style="display:none;"></div>
         </div>
       </div>
 
@@ -104,7 +106,7 @@
         <button id="logoutBtn" style="background:#ff4444">Logout</button>
       </div>
 
-      <!-- Extended Admin Controls -->
+      <!-- Admin Controls -->
       <div id="adminControlPanel">
         <strong>🛠 Admin Controls</strong>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
@@ -119,7 +121,7 @@
 
         <div id="dbManager" style="display:none; margin-top:12px;">
           <strong>Realtime DB Manager</strong>
-          <div class="muted">View top-level nodes and delete nodes. Dangerous: use with care.</div>
+          <div class="small">View top-level nodes and delete nodes. Dangerous: use with care.</div>
           <div id="dbNodes" style="margin-top:8px;"></div>
         </div>
       </div>
@@ -134,6 +136,7 @@
   </div>
 
 <script type="module">
+// Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
@@ -159,6 +162,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+/* DOM */
 const authContainer = document.getElementById("authContainer");
 const chatContainer = document.getElementById("chatContainer");
 const chatBox = document.getElementById("chatBox");
@@ -173,8 +177,7 @@ const imgModal = document.getElementById("imgModal");
 const modalImg = document.getElementById("modalImg");
 const modalVideo = document.getElementById("modalVideo");
 
-const adminPanel = document.getElementById("adminControlPanel");
-
+const adminPanel = null; // removed
 const ADMIN_EMAILS = [
   "aj.xanman@gmail.com",
   "alexa_pears736@ahschools.us",
@@ -189,9 +192,11 @@ const ADMIN_EMAILS = [
 let messagesRef = null;
 let currentNickname = "Anonymous";
 
+/* helpers */
 function showError(msg){ document.getElementById("authError").innerText = msg || ""; }
 function clearMessages(){ chatBox.innerHTML = ""; if(messagesRef) off(messagesRef); }
 
+/* auth handlers */
 document.getElementById("loginBtn").onclick = async () => {
   const email = document.getElementById("email").value.trim();
   const pass = document.getElementById("password").value;
@@ -199,10 +204,7 @@ document.getElementById("loginBtn").onclick = async () => {
     const cred = await signInWithEmailAndPassword(auth,email,pass);
     const userRef = ref(db,"users/"+cred.user.uid);
     const snap = await get(userRef);
-    if(snap.exists() && snap.val().banned){
-      await signOut(auth);
-      return showError("You are banned from this chat.");
-    }
+    if(snap.exists() && snap.val().banned){ await signOut(auth); return showError("You are banned."); }
     showError("");
   }catch(err){ showError(err.message); }
 };
@@ -218,41 +220,31 @@ document.getElementById("registerBtn").onclick = async () => {
     if(!snap.exists()) return showError("Invalid invite code.");
     if(snap.val().used) return showError("Invite code already used.");
     const bannedSnap = await get(ref(db,"banned"));
-    if(bannedSnap.exists()){
-      const bannedObj = bannedSnap.val();
-      if(Object.values(bannedObj).some(b => b.email === email)){
-        return showError("This email is banned.");
-      }
-    }
+    if(bannedSnap.exists()){ const bannedObj = bannedSnap.val(); if(Object.values(bannedObj).some(b => b.email === email)){ return showError("This email is banned."); } }
     await set(codeRef,{...snap.val(), used:true});
     const cred = await createUserWithEmailAndPassword(auth,email,pass);
     const nick = prompt("Choose a nickname:") || "Anonymous";
     await set(ref(db,"users/"+cred.user.uid), { nickname: nick, email: email });
     showError("");
-  }catch(err){
-    showError(err.message);
-  }
+  }catch(err){ showError(err.message); }
 };
 
 onAuthStateChanged(auth, async user => {
   if(user){
     const userRef = ref(db,"users/"+user.uid);
     const snap = await get(userRef);
-    if(snap.exists() && snap.val().banned){
-      await signOut(auth);
-      return alert("You are banned.");
-    }
+    if(snap.exists() && snap.val().banned){ await signOut(auth); return alert("You are banned."); }
+
     authContainer.style.display = "none";
     chatContainer.style.display = "block";
-    if(snap.exists()){
-      currentNickname = snap.val().nickname || "Anonymous";
-      if(ADMIN_EMAILS.includes(user.email)){
-        adminPanel.style.display = "block";
-      } else {
-        adminPanel.style.display = "none";
-      }
+
+    if(snap.exists()) currentNickname = snap.val().nickname || "Anonymous";
+
+    const adminControlPanel = document.getElementById("adminControlPanel");
+    if(ADMIN_EMAILS.includes(user.email)){
+      adminControlPanel.style.display = "block";
     } else {
-      adminPanel.style.display = "none";
+      adminControlPanel.style.display = "none";
     }
     loadMessages();
   } else {
@@ -262,7 +254,7 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-/* Message send */
+/* Send messages */
 async function sendMessage(text="", imageUrl=""){
   if(!text && !imageUrl) return;
   const user = auth.currentUser;
@@ -272,7 +264,7 @@ async function sendMessage(text="", imageUrl=""){
     const u = userSnap.val();
     if(u.kicked) return alert("You’ve been kicked. Please rejoin later.");
     if(u.banned) return alert("You are banned.");
-    if(u.muted) return alert("You are muted and cannot send messages.");
+    if(u.muted) return alert("You are muted.");
   }
   await push(ref(db,"messages"), {
     uid: user.uid,
@@ -288,23 +280,19 @@ async function sendMessage(text="", imageUrl=""){
 sendBtn.onclick = ()=> sendMessage(msgInput.value);
 msgInput.addEventListener("keypress", e => { if(e.key === "Enter") sendMessage(msgInput.value); });
 
-/* File upload to Cloudinary */
+/* File upload */
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   if(!file) return;
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "z1d4s4al"); 
+  formData.append("upload_preset", "z1d4s4al");
   try{
     const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method:"POST", body:formData });
     const data = await res.json();
-    if(data.secure_url){
-      await sendMessage("", data.secure_url);
-    }
+    if(data.secure_url) await sendMessage("", data.secure_url);
     fileInput.value = "";
-  }catch(err){
-    alert("Upload failed: " + err.message);
-  }
+  }catch(err){ alert("Upload failed: " + err.message); }
 });
 
 /* Load messages */
@@ -337,19 +325,16 @@ function loadMessages(){
       "o71613869@gmail.com": " 🐉"
     };
     const suffix = SUFFIXES[msg.email] || "";
-
-    // Plain white names only
     const nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+
+    if(msg.uid === "SYSTEM"){ wrapper.style.background = "#2b2b2b"; wrapper.style.borderLeft = "4px solid #ffaa00"; wrapper.style.padding = "8px"; }
 
     let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
     if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
     if(msg.imageUrl){
       const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
-      if(isVideo){
-        content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
-      } else {
-        content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
-      }
+      if(isVideo) content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
+      else content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
     }
 
     wrapper.innerHTML = content;
@@ -372,18 +357,37 @@ function loadMessages(){
 
     const img = wrapper.querySelector(".chat-img");
     const vid = wrapper.querySelector("video.chat-video");
-    if(img) img.onclick = () => { modalVideo.style.display="none"; modalImg.style.display="block"; modalImg.src=img.src; imgModal.style.display="flex"; imgModal.setAttribute("aria-hidden","false"); };
-    if(vid) vid.onclick = () => { modalImg.style.display="none"; modalVideo.style.display="block"; modalVideo.src=vid.src; imgModal.style.display="flex"; imgModal.setAttribute("aria-hidden","false"); };
+    if(img) img.onclick = () => { modalVideo.style.display = "none"; modalImg.style.display = "block"; modalImg.src = img.src; imgModal.style.display = "flex"; imgModal.setAttribute("aria-hidden","false"); };
+    if(vid) vid.onclick = () => { modalImg.style.display = "none"; modalVideo.style.display = "block"; modalVideo.src = vid.src; imgModal.style.display = "flex"; imgModal.setAttribute("aria-hidden","false"); };
   });
 
   onChildRemoved(ref(db,"messages"), snap => { const el = document.getElementById("msg-" + snap.key); if(el) el.remove(); });
 }
 
+/* Utilities */
 function escapeHtml(text){ if(!text) return ""; return text.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'", "&#039;"); }
+imgModal.onclick = (e) => { if(e.target===modalVideo || e.target===modalImg || e.target===imgModal){ imgModal.style.display="none"; modalImg.style.display="none"; modalVideo.style.display="none"; imgModal.setAttribute("aria-hidden","true"); modalVideo.pause(); }};
 
-imgModal.onclick = (e) => { if(e.target === modalVideo) return; imgModal.style.display="none"; modalImg.src=""; modalVideo.src=""; modalImg.style.display="block"; modalVideo.style.display="none"; imgModal.setAttribute("aria-hidden","true"); };
+/* Logout */
+logoutBtn.onclick = async () => { await signOut(auth); };
 
-logoutBtn.onclick = async () => { await signOut(auth); chatContainer.style.display="none"; authContainer.style.display="block"; clearMessages(); };
+/* Invite generation */
+generateBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Sign in first.");
+  const code = Math.random().toString(36).slice(2,10);
+  await set(ref(db,"inviteCodes/"+code), { createdBy: user.uid, used:false, timestamp: Date.now() });
+  alert("Invite code created: " + code);
+};
+viewBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Sign in first.");
+  const snap = await get(ref(db,"inviteCodes"));
+  if(!snap.exists()) return alert("No codes.");
+  const codes = snap.val();
+  myCodesDiv.style.display = "block";
+  myCodesDiv.innerHTML = Object.entries(codes).filter(([k,v])=>v.createdBy===user.uid).map(([k,v])=>k+" - "+(v.used?"used":"unused")).join("<br>");
+};
 
 </script>
 </body>
