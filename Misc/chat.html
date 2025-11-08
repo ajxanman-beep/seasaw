@@ -51,23 +51,19 @@
   #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
   #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
 
-  /* Name rendering helpers - fixed gradient & animation support */
+  /* Name rendering - FIXED gradient support */
   .name {
     font-weight:700;
     display:inline-block;
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-    -webkit-text-fill-color: transparent;
   }
-  .name.static { color:transparent; -webkit-text-fill-color: transparent; }
-  .name.animated {
-    color:transparent;
-    -webkit-text-fill-color: transparent;
+  .name.gradient {
     background-size: 200% 100%;
-    background-repeat: no-repeat;
     -webkit-background-clip: text;
-            background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .name.gradient.animated {
     animation: gradientShift var(--speed, 5s) linear infinite;
   }
   @keyframes gradientShift {
@@ -170,6 +166,7 @@
           <label style="display:flex;gap:6px;align-items:center;"><input id="animatedToggle" type="checkbox" /> Animated gradient</label>
           <label style="display:flex;gap:6px;align-items:center;">Speed (s): <input id="animSpeed" type="number" min="1" value="6" /></label>
           <button id="saveColorBtn" style="margin-left:auto;background:#0078ff">Save Color</button>
+          <button id="clearColorBtn" style="background:#ff4444">Clear Color</button>
         </div>
       </div>
 
@@ -252,6 +249,7 @@ const labelEndText = document.getElementById("labelEndText");
 const animatedToggle = document.getElementById("animatedToggle");
 const animSpeed = document.getElementById("animSpeed");
 const saveColorBtn = document.getElementById("saveColorBtn");
+const clearColorBtn = document.getElementById("clearColorBtn");
 
 const ADMIN_EMAILS = [
   "aj.xanman@gmail.com",
@@ -280,7 +278,6 @@ document.getElementById("loginBtn").onclick = async () => {
   const pass = document.getElementById("password").value;
   try{
     const cred = await signInWithEmailAndPassword(auth,email,pass);
-    // check if banned
     const userRef = ref(db,"users/"+cred.user.uid);
     const snap = await get(userRef);
     if(snap.exists() && snap.val().banned){
@@ -301,7 +298,6 @@ document.getElementById("registerBtn").onclick = async () => {
     const snap = await get(codeRef);
     if(!snap.exists()) return showError("Invalid invite code.");
     if(snap.val().used) return showError("Invite code already used.");
-    // check banned emails
     const bannedSnap = await get(ref(db,"banned"));
     if(bannedSnap.exists()){
       const bannedObj = bannedSnap.val();
@@ -321,7 +317,6 @@ document.getElementById("registerBtn").onclick = async () => {
 
 onAuthStateChanged(auth, async user => {
   if(user){
-    // check banned flag
     const userRef = ref(db,"users/"+user.uid);
     const snap = await get(userRef);
     if(snap.exists() && snap.val().banned){
@@ -331,19 +326,17 @@ onAuthStateChanged(auth, async user => {
 
     authContainer.style.display = "none";
     chatContainer.style.display = "block";
-    // load user profile
     if(snap.exists()){
       currentNickname = snap.val().nickname || "Anonymous";
-      // populate admin color inputs if admin and have color saved
       if(ADMIN_EMAILS.includes(user.email)){
         adminPanel.style.display = "block";
         document.getElementById("adminControlPanel").style.display = "block";
         const col = snap.val().color || null;
         if(col){
-          colorStart.value = col.start || colorStart.value;
-          labelStartText.value = col.start || colorStart.value;
-          colorEnd.value = col.end || colorEnd.value;
-          labelEndText.value = col.end || colorEnd.value;
+          colorStart.value = col.start || "#00ffcc";
+          labelStartText.value = col.start || "#00ffcc";
+          colorEnd.value = col.end || "#ff00cc";
+          labelEndText.value = col.end || "#ff00cc";
           animatedToggle.checked = !!col.animated;
           animSpeed.value = col.speed || 6;
         }
@@ -374,6 +367,23 @@ saveColorBtn.onclick = async () => {
   const colorData = { start, end, animated, speed };
   await update(ref(db,"users/"+user.uid), { color: colorData });
   alert("Saved admin name color!");
+  loadMessages(); // Refresh to show updated colors
+};
+
+/* Clear admin color settings */
+clearColorBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Not signed in.");
+  if(!confirm("Remove your custom name color?")) return;
+  await update(ref(db,"users/"+user.uid), { color: null });
+  colorStart.value = "#00ffcc";
+  colorEnd.value = "#ff00cc";
+  labelStartText.value = "#00ffcc";
+  labelEndText.value = "#ff00cc";
+  animatedToggle.checked = false;
+  animSpeed.value = 6;
+  alert("Color cleared!");
+  loadMessages(); // Refresh messages
 };
 
 /* Message send */
@@ -384,7 +394,7 @@ async function sendMessage(text="", imageUrl=""){
   const userSnap = await get(ref(db,"users/"+user.uid));
   if(userSnap.exists()){
     const u = userSnap.val();
-    if(u.kicked) return alert("You’ve been kicked. Please rejoin later.");
+    if(u.kicked) return alert("You've been kicked. Please rejoin later.");
     if(u.banned) return alert("You are banned.");
     if(u.muted) return alert("You are muted and cannot send messages.");
   }
@@ -408,7 +418,7 @@ fileInput.addEventListener("change", async () => {
   if(!file) return;
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "z1d4s4al"); // user's preset
+  formData.append("upload_preset", "z1d4s4al");
   try{
     const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method:"POST", body:formData });
     const data = await res.json();
@@ -421,12 +431,11 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-/* Load messages and render names with colors */
+/* Load messages and render names with FIXED gradients */
 function loadMessages(){
   if(messagesRef) off(messagesRef);
   chatBox.innerHTML = "";
   messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
-  const messageElements = {};
 
   onChildAdded(messagesRef, async snap => {
     const msg = snap.val();
@@ -434,7 +443,6 @@ function loadMessages(){
     wrapper.className = "message";
     wrapper.id = "msg-" + snap.key;
 
-    // format time
     const d = new Date(msg.timestamp || Date.now());
     const hours = d.getHours();
     const minutes = d.getMinutes().toString().padStart(2,"0");
@@ -442,7 +450,6 @@ function loadMessages(){
     const displayHour = ((hours + 11) % 12) + 1;
     const timeStr = `${displayHour}:${minutes} ${ampm}`;
 
-    // suffix mapping
     const SUFFIXES = {
       "aj.xanman@gmail.com": " 👑",
       "alexa_pears736@ahschools.us": " 👑",
@@ -455,8 +462,8 @@ function loadMessages(){
     };
     const suffix = SUFFIXES[msg.email] || "";
 
-    // determine name style: fetch user profile by uid (if available)
-    let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
+    // FIXED: Determine name style with proper gradient rendering
+    let nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
     if(msg.uid){
       try{
         const userSnap = await get(ref(db,"users/"+msg.uid));
@@ -466,34 +473,26 @@ function loadMessages(){
             const start = u.color.start || "#ffffff";
             const end = u.color.end || start;
             const animated = !!u.color.animated;
-            const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
+            const speed = u.color.speed || 6;
 
             const bg = `linear-gradient(90deg, ${start}, ${end})`;
-            if(animated){
-              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
-            } else {
-              // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
-              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
-            }
-          } else {
-            nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+            const classes = animated ? "name gradient animated" : "name gradient";
+            const style = animated ? `background: ${bg}; --speed: ${speed}s;` : `background: ${bg};`;
+            
+            nameHtml = `<span class="${classes}" style="${style}">${msg.nickname || "Anonymous"}${suffix}</span>`;
           }
-        } else {
-          nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
         }
       }catch(e){
-        nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+        // Fallback to default
       }
     }
 
-    // system message styling
     if(msg.uid === "SYSTEM"){
       wrapper.style.background = "#2b2b2b";
       wrapper.style.borderLeft = "4px solid #ffaa00";
       wrapper.style.padding = "8px";
     }
 
-    // build message content
     let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
     if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
     if(msg.imageUrl){
@@ -507,7 +506,6 @@ function loadMessages(){
 
     wrapper.innerHTML = content;
 
-    // delete button if owner or admin (admins cannot delete other admins' messages)
     const currentUser = auth.currentUser;
     if(currentUser){
       const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
@@ -526,7 +524,6 @@ function loadMessages(){
     chatBox.appendChild(wrapper);
     chatBox.scrollTop = chatBox.scrollHeight;
 
-    // image/video modal click
     const img = wrapper.querySelector(".chat-img");
     const vid = wrapper.querySelector("video.chat-video");
     if(img) img.onclick = () => {
@@ -543,8 +540,6 @@ function loadMessages(){
       imgModal.style.display = "flex";
       imgModal.setAttribute("aria-hidden","false");
     };
-
-    messageElements[snap.key] = wrapper;
   });
 
   onChildRemoved(ref(db,"messages"), snap => {
@@ -553,7 +548,6 @@ function loadMessages(){
   });
 }
 
-/* small utility to escape HTML in messages */
 function escapeHtml(text){
   if(!text) return "";
   return text
@@ -564,9 +558,7 @@ function escapeHtml(text){
     .replaceAll("'", "&#039;");
 }
 
-/* modal hide */
 imgModal.onclick = (e) => {
-  // close unless clicking the video controls
   if(e.target === modalVideo) return;
   imgModal.style.display = "none";
   modalImg.src = "";
@@ -576,7 +568,6 @@ imgModal.onclick = (e) => {
   imgModal.setAttribute("aria-hidden","true");
 };
 
-/* Invite code generation/view */
 generateBtn.onclick = async () => {
   const user = auth.currentUser;
   if(!user) return alert("Sign in first.");
@@ -609,10 +600,8 @@ async function displayMyCodes(){
   myCodesDiv.innerText = codes.length ? "Your codes: " + codes.join(", ") : "No invite codes yet";
 }
 
-/* logout */
 logoutBtn.onclick = () => signOut(auth);
 
-/* small UI helpers: sync color input text fields with color pickers */
 labelStartText.addEventListener("input", () => {
   const v = labelStartText.value.trim();
   if(/^#([0-9A-Fa-f]{6})$/.test(v)) colorStart.value = v;
@@ -624,7 +613,6 @@ labelEndText.addEventListener("input", () => {
 colorStart.addEventListener("input", () => { labelStartText.value = colorStart.value; });
 colorEnd.addEventListener("input", () => { labelEndText.value = colorEnd.value; });
 
-/* ensure chat stays scrolled on new messages when focus not on older ones */
 chatBox.addEventListener('DOMNodeInserted', e => {
   const el = e.target;
   if(el && el.classList && el.classList.contains('message')){
@@ -632,7 +620,6 @@ chatBox.addEventListener('DOMNodeInserted', e => {
   }
 });
 
-/* ADMIN: View all users and manage them (now with unkick/unban and admin protections) */
 const userListDiv = document.getElementById("userList");
 document.getElementById("viewUsersBtn").onclick = async () => {
   if(userListDiv.style.display === "none" || userListDiv.style.display === ""){
@@ -652,16 +639,11 @@ document.getElementById("viewUsersBtn").onclick = async () => {
       const nick = data.nickname || "Unnamed";
       const targetIsAdmin = ADMIN_EMAILS.includes(email);
 
-      // build controls but disable actions that affect other admins
       const controls = [];
       if(!targetIsAdmin || (currentUser && currentUser.uid === uid)){
-        // Kick / Unkick
         controls.push(`<button onclick="toggleKick('${uid}', ${isKicked})" style="background:${isKicked ? '#00cc66' : '#ff5555'};">${isKicked ? 'Unkick' : 'Kick'}</button>`);
-        // Mute / Unmute
         controls.push(`<button onclick="toggleMute('${uid}', ${isMuted})" style="background:${isMuted ? '#00cc66' : '#ffaa00'};">${isMuted ? 'Unmute' : 'Mute'}</button>`);
-        // Ban / Unban
         controls.push(`<button onclick="toggleBan('${uid}', '${email}', ${isBanned})" style="background:${isBanned ? '#00cc66' : '#aa00ff'};">${isBanned ? 'Unban' : 'Ban'}</button>`);
-        // Auth actions (server-side) - queued
         controls.push(`<button onclick="requestAuthAction('${uid}','${email}','disable')" style="background:#cc6633;">Disable Auth</button>`);
         controls.push(`<button onclick="requestAuthAction('${uid}','${email}','delete')" style="background:#aa3333;">Delete Auth</button>`);
       } else {
@@ -683,23 +665,20 @@ document.getElementById("viewUsersBtn").onclick = async () => {
   }
 };
 
-// toggle kick/unkick
 window.toggleKick = async (uid, currentlyKicked) => {
   const newVal = !currentlyKicked;
   await update(ref(db, "users/"+uid), { kicked: newVal });
   alert(newVal ? "User kicked." : "User un-kicked.");
-  document.getElementById("viewUsersBtn").click(); // refresh
+  document.getElementById("viewUsersBtn").click();
 };
 
-// toggle mute/unmute
 window.toggleMute = async (uid, currentlyMuted) => {
   const newVal = !currentlyMuted;
   await update(ref(db, "users/"+uid), { muted: newVal });
   alert(newVal ? "User muted." : "User unmuted.");
-  document.getElementById("viewUsersBtn").click(); // refresh
+  document.getElementById("viewUsersBtn").click();
 };
 
-// toggle ban/unban
 window.toggleBan = async (uid, email, currentlyBanned) => {
   const newVal = !currentlyBanned;
   if(newVal){
@@ -713,12 +692,9 @@ window.toggleBan = async (uid, email, currentlyBanned) => {
     await remove(ref(db, "banned/"+uid));
     alert("User unbanned.");
   }
-  document.getElementById("viewUsersBtn").click(); // refresh
+  document.getElementById("viewUsersBtn").click();
 };
 
-/* Admin -> request Auth actions (disable/delete) that must be processed server-side with Admin SDK.
-   We queue the request under /adminActions and include requester info.
-*/
 window.requestAuthAction = async (uid, email, actionType) => {
   const requester = auth.currentUser;
   if(!requester) return alert("Sign in first.");
@@ -734,7 +710,6 @@ window.requestAuthAction = async (uid, email, actionType) => {
   alert("Auth action queued. Deploy a Cloud Function / server to process items in /adminActions using the Firebase Admin SDK.");
 };
 
-/* Broadcast system messages */
 document.getElementById("broadcastBtn").onclick = async () => {
   const msg = prompt("Enter a system message to broadcast:");
   if(!msg) return;
@@ -747,14 +722,12 @@ document.getElementById("broadcastBtn").onclick = async () => {
   });
 };
 
-/* Purge all messages (admin) */
 document.getElementById("purgeBtn").onclick = async () => {
   if(!confirm("Purge ALL messages? This cannot be undone.")) return;
   await remove(ref(db,"messages"));
   alert("All messages purged.");
 };
 
-/* Database manager UI */
 document.getElementById("dbManagerBtn").onclick = async () => {
   const dbManager = document.getElementById("dbManager");
   if(dbManager.style.display === "none" || dbManager.style.display === ""){
@@ -790,11 +763,9 @@ window.deleteNode = async (key) => {
   if(!confirm(`Delete node "${key}" from database? This is irreversible.`)) return;
   await remove(ref(db, key));
   alert(`Deleted node "${key}".`);
-  document.getElementById("dbManagerBtn").click(); // refresh
+  document.getElementById("dbManagerBtn").click();
 };
 
-
-/* Theme controls: allow admin to set a global theme saved in DB */
 document.getElementById("themeBtn").onclick = async () => {
   const newBg = prompt("Enter background CSS value (e.g. #121212 or linear-gradient(90deg,#111,#444)):", getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || "#121212");
   if(!newBg) return;
@@ -802,7 +773,6 @@ document.getElementById("themeBtn").onclick = async () => {
   await set(ref(db, "globalTheme"), { bg: newBg, updatedAt: Date.now() });
 };
 
-/* Listen for global theme updates */
 onValue(ref(db, "globalTheme"), snap => {
   if(snap.exists()){
     const theme = snap.val();
@@ -810,22 +780,6 @@ onValue(ref(db, "globalTheme"), snap => {
   }
 });
 
-/* Listen for kicked/banned flags and force sign out if current user is affected */
-onAuthStateChanged(auth, async user => {
-  if(!user) return;
-  const snap = await get(ref(db,"users/"+user.uid));
-  if(snap.exists()){
-    const u = snap.val();
-    if(u.kicked){
-      try{ await signOut(auth); alert("You have been kicked by an admin."); }catch(e){}
-    }
-    if(u.banned){
-      try{ await signOut(auth); alert("You are banned."); }catch(e){}
-    }
-  }
-});
-
-/* small listener to keep client up to date when their user flags change */
 function watchCurrentUserFlags(){
   const user = auth.currentUser;
   if(!user) return;
@@ -844,7 +798,3 @@ function watchCurrentUserFlags(){
   });
 }
 onAuthStateChanged(auth, u => { if(u) watchCurrentUserFlags(); });
-// fucking filty clanker
-</script>
-</body>
-</html>
