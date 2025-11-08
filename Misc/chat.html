@@ -424,10 +424,15 @@ fileInput.addEventListener("change", async () => {
 });
 
 /* Load messages and render names with colors - FIXED VERSION */
+let isInitialLoad = true;
+let loadedMessageKeys = new Set();
+
 function loadMessages(){
   if(messagesRef) off(messagesRef);
   chatBox.innerHTML = "";
   messageCache.clear();
+  loadedMessageKeys.clear();
+  isInitialLoad = true;
   messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
 
   onChildAdded(messagesRef, async snap => {
@@ -436,32 +441,73 @@ function loadMessages(){
     
     // Store in cache
     messageCache.set(snap.key, { msg, timestamp: msgTimestamp });
+    loadedMessageKeys.add(snap.key);
     
-    // Render all messages in order
-    await renderAllMessages();
+    // Check if this message is in correct chronological order
+    const sortedKeys = Array.from(messageCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp)
+      .map(entry => entry[0]);
+    
+    const currentIndex = sortedKeys.indexOf(snap.key);
+    const isLastMessage = currentIndex === sortedKeys.length - 1;
+    
+    // If initial load or message is out of order, re-render all
+    if(isInitialLoad || !isLastMessage) {
+      await renderAllMessages();
+      // After initial messages load, switch to append mode
+      if(loadedMessageKeys.size > 0) {
+        setTimeout(() => { isInitialLoad = false; }, 1000);
+      }
+    } else {
+      // Message is in order, just append it
+      await renderMessage(snap.key, msg);
+      const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 100;
+      if(wasScrolledToBottom) {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
   });
 
   onChildRemoved(ref(db,"messages"), snap => {
     messageCache.delete(snap.key);
-    renderAllMessages();
+    loadedMessageKeys.delete(snap.key);
+    const el = document.getElementById("msg-" + snap.key);
+    if(el) el.remove();
   });
 }
 
 async function renderAllMessages() {
-  const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 50;
+  const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 100;
+  const scrollPos = chatBox.scrollTop;
   
   // Sort messages by timestamp
   const sortedMessages = Array.from(messageCache.entries())
     .sort((a, b) => a[1].timestamp - b[1].timestamp);
   
+  // Save existing message elements to avoid re-fetching user data
+  const existingElements = new Map();
+  sortedMessages.forEach(([key]) => {
+    const el = document.getElementById("msg-" + key);
+    if(el) existingElements.set(key, el);
+  });
+  
   chatBox.innerHTML = "";
   
   for (const [key, data] of sortedMessages) {
-    await renderMessage(key, data.msg);
+    if(existingElements.has(key)) {
+      // Reuse existing element
+      chatBox.appendChild(existingElements.get(key));
+    } else {
+      // Render new message
+      await renderMessage(key, data.msg);
+    }
   }
   
   if (wasScrolledToBottom) {
     chatBox.scrollTop = chatBox.scrollHeight;
+  } else if(!isInitialLoad) {
+    // Try to maintain scroll position during re-render
+    chatBox.scrollTop = scrollPos;
   }
 }
 
