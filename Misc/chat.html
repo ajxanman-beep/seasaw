@@ -3,235 +3,479 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Chat Room</title>
+<title>Chat Room — Gradient Admin Names</title>
 <style>
-  :root { --bg:#121212; --card:#1f1f1f; --muted:rgba(255,255,255,0.7); --accent:#0078ff; }
-  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:Arial,sans-serif; background:var(--bg); color:#fff; }
-  .container{ width:92%; max-width:980px; background:var(--card); border-radius:12px; padding:18px; box-sizing:border-box; border:1px solid #333; }
-  #chatBox{ height:420px; overflow:auto; background:#222; border-radius:8px; padding:12px; border:1px solid #333; }
+  :root {
+    --bg: #121212;
+    --card: #1f1f1f;
+    --muted: rgba(255,255,255,0.7);
+  }
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:Arial,Helvetica,sans-serif;
+    background:var(--bg);
+    color:#fff;
+  }
+  .container{
+    width:92%;
+    max-width:760px;
+    background:var(--card);
+    border-radius:12px;
+    padding:18px;
+    box-sizing:border-box;
+    border:1px solid #333;
+  }
+  #chatBox{
+    height:420px;
+    overflow:auto;
+    background:#222;
+    border-radius:8px;
+    padding:12px;
+    border:1px solid #333;
+  }
   #inputArea{ display:flex; gap:10px; margin-top:12px; align-items:center; }
-  input[type="text"], input[type="email"], input[type="password"]{ padding:10px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; outline:none; flex:1; }
+  input[type="text"], input[type="email"], input[type="password"]{
+    padding:10px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; outline:none; flex:1;
+  }
   input[type="file"]{ padding:6px; }
-  button{ padding:10px 12px; border-radius:6px; border:none; cursor:pointer; background:var(--accent); color:white; }
+  button{ padding:10px 12px; border-radius:6px; border:none; cursor:pointer; background:#0078ff; color:white; }
   .muted{ color:var(--muted); font-size:0.95rem; }
   .delete-btn{ color:#ff6666; margin-left:10px; cursor:pointer; font-size:0.85rem; }
-  .chat-img, .chat-video{ display:block; max-width:320px; max-height:240px; margin-top:6px; border-radius:6px; cursor:pointer; }
+  .chat-img{ display:block; max-width:220px; max-height:220px; margin-top:6px; border-radius:6px; cursor:pointer; }
   #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
-  #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
+  #imgModal img{ max-width:94%; max-height:94%; border-radius:6px; }
 
-  .name{ font-weight:700; display:inline-block; -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color: transparent; }
-  .name.static{ color:transparent; -webkit-text-fill-color: transparent; }
-  .name.animated{ color:transparent; -webkit-text-fill-color: transparent; background-size: 200% 100%; background-repeat:no-repeat; -webkit-background-clip:text; background-clip:text; animation: gradientShift var(--speed,5s) linear infinite; }
-  @keyframes gradientShift { 0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;} }
+  /* Name rendering helpers */
+  .name {
+    font-weight:700;
+    display:inline-block;
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  /* Non-animated gradient or solid */
+  .name.static {
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  /* Animated gradient */
+  .name.animated {
+    color: transparent;
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+            background-clip: text;
+    animation: gradientShift var(--speed, 5s) linear infinite;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 
-  #adminColorPanel{ margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; display:none; border:1px solid #3a3a3a; }
+  /* Admin color panel */
+  #adminColorPanel{
+    margin-top:12px;
+    background:#2a2a2a;
+    padding:12px;
+    border-radius:8px;
+    display:none;
+    border:1px solid #3a3a3a;
+  }
   #adminColorPanel label{ display:block; font-size:0.9rem; margin-top:6px; margin-bottom:4px; color:var(--muted); }
   #adminColorPanel .row{ display:flex; gap:8px; align-items:center; margin-top:6px; }
   #adminColorPanel input[type="color"]{ width:48px; height:36px; padding:0; border-radius:6px; border:none; }
   #adminColorPanel input[type="number"]{ width:80px; padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; }
+  .small{ font-size:0.9rem; color:var(--muted); }
+  .top-row{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .invite-row{ display:flex; gap:8px; align-items:center; margin-top:10px; }
 
-  #adminControlPanel{ display:none; margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; border:1px solid #3a3a3a; }
-  #userList{ margin-top:8px; max-height:260px; overflow:auto; }
-  #dbManager{ display:none; margin-top:10px; background:#222; padding:8px; border-radius:8px; border:1px solid #333; }
-  .theme-swatch{ display:inline-block; width:36px; height:24px; border-radius:6px; border:1px solid #333; cursor:pointer; margin-right:6px; vertical-align:middle; }
-  .message{ margin-bottom:10px; line-height:1.3; padding:6px; border-radius:6px; }
-  @media(max-width:720px){ #chatBox{ height:300px; } .container{ padding:12px; } }
+  /* simple message block spacing */
+  .message { margin-bottom:10px; line-height:1.3; }
 </style>
 </head>
 <body>
-<div class="container" id="mainContainer">
-  <div id="authContainer">
-    <h2 style="margin:0 0 10px 0;">Sign In or Register</h2>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <input id="email" type="email" placeholder="Email" />
-      <input id="password" type="password" placeholder="Password" />
-      <input id="inviteCode" type="text" placeholder="Invite Code (for registration)" />
-      <div style="display:flex;gap:8px;">
-        <button id="loginBtn">Login</button>
-        <button id="registerBtn" style="background:#00aa88">Register</button>
-      </div>
-      <p id="authError" style="color:#ff6666;margin:0;"></p>
-    </div>
-  </div>
+  <div class="container" id="mainContainer">
 
-  <div id="chatContainer" style="display:none;">
-    <div class="top-row">
-      <h2 style="margin:0">Chat Room</h2>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button id="generateInviteBtn" style="background:#00cc66">Generate Invite</button>
-        <button id="viewCodesBtn" style="background:#ffaa00">View Invite Codes</button>
-        <div id="myCodes" class="small" style="display:none;"></div>
-      </div>
-    </div>
-    <div id="chatBox" aria-live="polite"></div>
-    <div id="inputArea">
-      <input id="messageInput" type="text" placeholder="Type a message..." />
-      <input id="fileInput" type="file" accept="image/*,video/*" />
-      <button id="sendButton">Send</button>
-      <button id="logoutBtn" style="background:#ff4444">Logout</button>
-    </div>
-
-    <div id="adminColorPanel">
-      <strong>Admin Name Color / Gradient</strong>
-      <div class="small">Choose start & end colors. If start === end, the name looks like a solid color.</div>
-      <label>Start color</label>
-      <div class="row">
-        <input id="colorStart" type="color" value="#00ffcc" />
-        <input id="labelStartText" type="text" placeholder="#00ffcc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
-      </div>
-      <label>End color (for gradient)</label>
-      <div class="row">
-        <input id="colorEnd" type="color" value="#ff00cc" />
-        <input id="labelEndText" type="text" placeholder="#ff00cc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
-      </div>
-      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
-        <label style="display:flex;gap:6px;align-items:center;"><input id="animatedToggle" type="checkbox" /> Animated gradient</label>
-        <label style="display:flex;gap:6px;align-items:center;">Speed (s): <input id="animSpeed" type="number" min="1" value="6" /></label>
-        <button id="saveColorBtn" style="margin-left:auto;background:#0078ff">Save Color</button>
+    <div id="authContainer">
+      <h2 style="margin:0 0 10px 0;">Sign In or Register</h2>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="email" type="email" placeholder="Email" />
+        <input id="password" type="password" placeholder="Password" />
+        <input id="inviteCode" type="text" placeholder="Invite Code (for registration)" />
+        <div style="display:flex;gap:8px;">
+          <button id="loginBtn">Login</button>
+          <button id="registerBtn" style="background:#00aa88">Register</button>
+        </div>
+        <p id="authError" style="color:#ff6666;margin:0;"></p>
       </div>
     </div>
 
-    <div id="adminControlPanel">
-      <strong>🛠 Admin Controls</strong>
-      <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
-        <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
-        <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
-        <button id="dbManagerBtn" style="background:#aa66ff;">Manage Database</button>
-        <button id="themeBtn" style="background:#00cc88;">Change Chat Theme</button>
-        <button id="purgeBtn" style="background:#ff6666;">Purge All Messages</button>
+    <div id="chatContainer" style="display:none;">
+      <div class="top-row">
+        <h2 style="margin:0">Chat Room</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="generateInviteBtn" style="background:#00cc66">Generate Invite</button>
+          <button id="viewCodesBtn" style="background:#ffaa00">View Invite Codes</button>
+          <button id="toggleGradientPanelBtn" style="background:#8855ff">Gradient Panel</button>
+          <div id="myCodes" class="small" style="display:none;"></div>
+        </div>
       </div>
-      <div id="userList" style="display:none; margin-top:12px;"></div>
-      <div id="dbManager" style="display:none; margin-top:12px;">
-        <strong>Realtime DB Manager</strong>
-        <div class="small">View top-level nodes and delete nodes. Dangerous: use with care.</div>
-        <div id="dbNodes" style="margin-top:8px;"></div>
+
+      <div id="chatBox" aria-live="polite"></div>
+
+      <div id="inputArea">
+        <input id="messageInput" type="text" placeholder="Type a message..." />
+        <input id="fileInput" type="file" accept="image/*,video/gif" />
+        <button id="sendButton">Send</button>
+        <button id="logoutBtn" style="background:#ff4444">Logout</button>
       </div>
+
+      <!-- Admin color panel -->
+      <div id="adminColorPanel">
+        <strong>Admin Name Color / Gradient</strong>
+        <div class="small">Choose start & end colors. If start === end, the name looks like a solid color.</div>
+
+        <label>Start color</label>
+        <div class="row">
+          <input id="colorStart" type="color" value="#00ffcc" />
+          <input id="labelStartText" type="text" placeholder="#00ffcc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
+        </div>
+
+        <label>End color (for gradient)</label>
+        <div class="row">
+          <input id="colorEnd" type="color" value="#ff00cc" />
+          <input id="labelEndText" type="text" placeholder="#ff00cc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
+          <label style="display:flex;gap:6px;align-items:center;"><input id="animatedToggle" type="checkbox" /> Animated gradient</label>
+          <label style="display:flex;gap:6px;align-items:center;">Speed (s): <input id="animSpeed" type="number" min="1" value="6" /></label>
+          <button id="saveColorBtn" style="margin-left:auto;background:#0078ff">Save Color</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="imgModal" aria-hidden="true">
+      <img id="modalImg" alt="Expanded"/>
     </div>
 
   </div>
-
-  <div id="imgModal" aria-hidden="true">
-    <img id="modalImg" alt="Expanded"/>
-    <video id="modalVideo" controls style="display:none;"></video>
-  </div>
-</div>
 
 <script type="module">
-// ====== Firebase Setup ======
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import {
+  getDatabase, ref, push, onChildAdded, onChildRemoved, remove,
+  query, orderByChild, off, set, get, update
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+  authDomain: "chat-or-somethig.firebaseapp.com",
+  databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+  projectId: "chat-or-somethig",
+  storageBucket: "chat-or-somethig.appspot.com",
+  messagingSenderId: "598777875087",
+  appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
+  measurementId: "G-VQQ0TYRNNH"
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
 const auth = getAuth(app);
+const db = getDatabase(app);
 
-// ====== DOM Elements ======
-const authContainer = document.getElementById('authContainer');
-const chatContainer = document.getElementById('chatContainer');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-const loginBtn = document.getElementById('loginBtn');
-const registerBtn = document.getElementById('registerBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const authError = document.getElementById('authError');
-const messageInput = document.getElementById('messageInput');
-const sendButton = document.getElementById('sendButton');
-const chatBox = document.getElementById('chatBox');
-const fileInput = document.getElementById('fileInput');
+const authContainer = document.getElementById("authContainer");
+const chatContainer = document.getElementById("chatContainer");
+const chatBox = document.getElementById("chatBox");
+const msgInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendButton");
+const logoutBtn = document.getElementById("logoutBtn");
+const generateBtn = document.getElementById("generateInviteBtn");
+const viewBtn = document.getElementById("viewCodesBtn");
+const myCodesDiv = document.getElementById("myCodes");
+const fileInput = document.getElementById("fileInput");
+const imgModal = document.getElementById("imgModal");
+const modalImg = document.getElementById("modalImg");
 
-// ====== Admin Elements ======
-const adminColorPanel = document.getElementById('adminColorPanel');
-const colorStart = document.getElementById('colorStart');
-const colorEnd = document.getElementById('colorEnd');
-const labelStartText = document.getElementById('labelStartText');
-const labelEndText = document.getElementById('labelEndText');
-const animatedToggle = document.getElementById('animatedToggle');
-const animSpeed = document.getElementById('animSpeed');
-const saveColorBtn = document.getElementById('saveColorBtn');
+const adminPanel = document.getElementById("adminColorPanel");
+const colorStart = document.getElementById("colorStart");
+const colorEnd = document.getElementById("colorEnd");
+const labelStartText = document.getElementById("labelStartText");
+const labelEndText = document.getElementById("labelEndText");
+const animatedToggle = document.getElementById("animatedToggle");
+const animSpeed = document.getElementById("animSpeed");
+const saveColorBtn = document.getElementById("saveColorBtn");
+const toggleGradientPanelBtn = document.getElementById("toggleGradientPanelBtn");
 
-// ====== Helper Functions ======
-function renderMessage(data){
-  const div = document.createElement('div');
-  div.className = 'message';
-  const userSpan = document.createElement('span');
-  userSpan.textContent = data.username + ": ";
-  userSpan.className = 'name';
-  if(data.adminGradient){
-    userSpan.style.background = `linear-gradient(to right, ${data.adminGradient.start}, ${data.adminGradient.end})`;
-    if(data.adminGradient.animated){
-      userSpan.classList.add('animated');
-      userSpan.style.setProperty('--speed', data.adminGradient.speed + 's');
-    } else { userSpan.classList.add('static'); }
+const ADMIN_EMAILS = [
+  "aj.xanman@gmail.com",
+  "alexa_pears736@ahschools.us",
+  "uyiog_aghay195@ahschools.us",
+  "carso_keller363@ahschools.us",
+  "legyo_dereg506@ahschools.us",
+  "jacks_waara234@ahschools.us",
+  "unclesam@gmail.com",
+  "o71613869@gmail.com"
+];
+
+let messagesRef = null;
+let currentNickname = "Anonymous";
+
+function showError(msg){ document.getElementById("authError").innerText = msg || ""; }
+function clearMessages(){ chatBox.innerHTML = ""; if(messagesRef) off(messagesRef); }
+
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value.trim();
+  const pass = document.getElementById("password").value;
+  try{ await signInWithEmailAndPassword(auth,email,pass); showError(""); }
+  catch(err){ showError(err.message); }
+};
+
+document.getElementById("registerBtn").onclick = async () => {
+  const email = document.getElementById("email").value.trim();
+  const pass = document.getElementById("password").value;
+  const code = document.getElementById("inviteCode").value.trim();
+  if(!code) return showError("Invite code required.");
+  try{
+    const codeRef = ref(db,"inviteCodes/"+code);
+    const snap = await get(codeRef);
+    if(!snap.exists()) return showError("Invalid invite code.");
+    if(snap.val().used) return showError("Invite code already used.");
+    await set(codeRef,{...snap.val(), used:true});
+    const cred = await createUserWithEmailAndPassword(auth,email,pass);
+    const nick = prompt("Choose a nickname:") || "Anonymous";
+    await set(ref(db,"users/"+cred.user.uid), { nickname: nick });
+    showError("");
+  }catch(err){ showError(err.message); }
+};
+
+onAuthStateChanged(auth, async user => {
+  if(user){
+    authContainer.style.display = "none";
+    chatContainer.style.display = "block";
+    const userRef = ref(db,"users/"+user.uid);
+    const snap = await get(userRef);
+    if(snap.exists()){
+      currentNickname = snap.val().nickname || "Anonymous";
+      if(ADMIN_EMAILS.includes(user.email)){
+        adminPanel.style.display = "block";
+        const col = snap.val().color || null;
+        if(col){
+          colorStart.value = col.start || colorStart.value;
+          labelStartText.value = col.start || colorStart.value;
+          colorEnd.value = col.end || colorEnd.value;
+          labelEndText.value = col.end || colorEnd.value;
+          animatedToggle.checked = !!col.animated;
+          animSpeed.value = col.speed || 6;
+        }
+      } else { adminPanel.style.display = "none"; }
+    } else { adminPanel.style.display = "none"; }
+    loadMessages();
+  } else {
+    authContainer.style.display = "block";
+    chatContainer.style.display = "none";
+    clearMessages();
   }
-  div.appendChild(userSpan);
-  const textNode = document.createTextNode(data.text);
-  div.appendChild(textNode);
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-// ====== Auth ======
-loginBtn.onclick = () => {
-  const email = emailInput.value;
-  const pass = passwordInput.value;
-  signInWithEmailAndPassword(auth,email,pass)
-    .then(() => { authContainer.style.display='none'; chatContainer.style.display='block'; checkAdmin(); })
-    .catch(e=>authError.textContent=e.message);
-};
-registerBtn.onclick = () => {
-  const email = emailInput.value;
-  const pass = passwordInput.value;
-  createUserWithEmailAndPassword(auth,email,pass)
-    .then(()=>{ authContainer.style.display='none'; chatContainer.style.display='block'; })
-    .catch(e=>authError.textContent=e.message);
-};
-logoutBtn.onclick = ()=>{ signOut(auth).then(()=>{ authContainer.style.display='flex'; chatContainer.style.display='none'; }) };
-
-// ====== Chat ======
-sendButton.onclick = ()=>{ sendMessage(); }
-messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ sendMessage(); }});
-
-function sendMessage(){
-  if(!messageInput.value) return;
-  push(ref(db,'messages'),{
-    username: auth.currentUser.email.split('@')[0],
-    text: messageInput.value,
-    timestamp: Date.now()
-  });
-  messageInput.value='';
-}
-
-// Listen for messages
-onValue(ref(db,'messages'), snapshot=>{
-  chatBox.innerHTML='';
-  snapshot.forEach(child=>{
-    renderMessage(child.val());
-  });
 });
 
-// ====== Admin ======
-function checkAdmin(){
-  // Simple example: email "admin@chat.com" is admin
-  if(auth.currentUser.email==='admin@chat.com'){
-    adminColorPanel.style.display='block';
-  }
-}
-saveColorBtn.onclick = ()=>{
-  const gradient = {start:colorStart.value,end:colorEnd.value,animated:animatedToggle.checked,speed:animSpeed.value};
-  alert('Admin gradient saved! (demo, apply in real app)');
+saveColorBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Not signed in.");
+  const start = labelStartText.value.trim() || colorStart.value;
+  const end = labelEndText.value.trim() || colorEnd.value;
+  const animated = !!animatedToggle.checked;
+  const speed = Math.max(1, Number(animSpeed.value) || 6);
+  const colorData = { start, end, animated, speed };
+  await update(ref(db,"users/"+user.uid), { color: colorData });
+  alert("Saved admin name color!");
+  // update existing messages instantly
+  document.querySelectorAll(`#chatBox .message`).forEach(msgEl=>{
+    const nameSpan = msgEl.querySelector(".name");
+    if(!nameSpan) return;
+    nameSpan.style.background = `linear-gradient(90deg, ${start}, ${end})`;
+    nameSpan.style.animationDuration = `${speed}s`;
+    if(animated) nameSpan.classList.add("animated");
+    else { nameSpan.classList.remove("animated"); nameSpan.classList.add("static"); }
+  });
 };
+
+toggleGradientPanelBtn.onclick = () => {
+  adminPanel.style.display = (adminPanel.style.display==="block") ? "none" : "block";
+};
+
+function sendMessage(text="", imageUrl=""){
+  if(!text && !imageUrl) return;
+  const user = auth.currentUser;
+  if(!user) return alert("You must be signed in.");
+  push(ref(db,"messages"), {
+    uid: user.uid,
+    email: user.email,
+    nickname: currentNickname,
+    text: text,
+    imageUrl: imageUrl || "",
+    timestamp: Date.now()
+  });
+  msgInput.value = "";
+}
+
+sendBtn.onclick = ()=> sendMessage(msgInput.value);
+msgInput.addEventListener("keypress", e => { if(e.key === "Enter") sendMessage(msgInput.value); });
+
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0];
+  if(!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "z1d4s4al");
+  try{
+    const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method:"POST", body:formData });
+    const data = await res.json();
+    if(data.secure_url) sendMessage("", data.secure_url);
+    fileInput.value = "";
+  }catch(err){ alert("Upload failed: " + err.message); }
+});
+
+function loadMessages(){
+  if(messagesRef) off(messagesRef);
+  chatBox.innerHTML = "";
+  messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
+  const SUFFIXES = {
+    "aj.xanman@gmail.com": " 👑",
+    "alexa_pears736@ahschools.us": " 👑",
+    "uyiog_aghay195@ahschools.us": " 🐉",
+    "carso_keller363@ahschools.us": " ⚡",
+    "legyo_dereg506@ahschools.us": " ⚡",
+    "jacks_waara234@ahschools.us": " ⚡",
+    "unclesam@gmail.com": " ⚡",
+    "o71613869@gmail.com": " 🐉"
+  };
+  onChildAdded(messagesRef, async snap => {
+    const msg = snap.val();
+    const wrapper = document.createElement("div");
+    wrapper.className = "message";
+    wrapper.id = "msg-" + snap.key;
+    const d = new Date(msg.timestamp || Date.now());
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2,"0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const displayHour = ((hours + 11) % 12) + 1;
+    const timeStr = `${displayHour}:${minutes} ${ampm}`;
+    const suffix = SUFFIXES[msg.email] || "";
+
+    let nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+    if(msg.uid){
+      try{
+        const userSnap = await get(ref(db,"users/"+msg.uid));
+        if(userSnap.exists() && userSnap.val().color){
+          const u = userSnap.val();
+          const start = u.color.start || "#ffffff";
+          const end = u.color.end || start;
+          const animated = !!u.color.animated;
+          const speed = u.color.speed ? `${u.color.speed}s` : "6s";
+          if(animated) nameHtml = `<span class="name animated" style="--speed:${speed}; background:linear-gradient(90deg, ${start}, ${end});">${msg.nickname || "Anonymous"}${suffix}</span>`;
+          else nameHtml = `<span class="name static" style="background:linear-gradient(90deg, ${start}, ${end});">${msg.nickname || "Anonymous"}${suffix}</span>`;
+        }
+      }catch(e){}
+    }
+
+    let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
+    if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
+    if(msg.imageUrl) content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+    wrapper.innerHTML = content;
+
+    const currentUser = auth.currentUser;
+    if(currentUser){
+      if(msg.uid === currentUser.uid || ADMIN_EMAILS.includes(currentUser.email)){
+        const del = document.createElement("span");
+        del.className = "delete-btn";
+        del.textContent = "[delete]";
+        del.onclick = () => { if(confirm("Delete this message?")) remove(ref(db,"messages/"+snap.key)); };
+        wrapper.appendChild(del);
+      }
+    }
+
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const img = wrapper.querySelector(".chat-img");
+    if(img) img.onclick = () => { modalImg.src = img.src; imgModal.style.display = "flex"; imgModal.setAttribute("aria-hidden","false"); };
+  });
+
+  onChildRemoved(ref(db,"messages"), snap => {
+    const el = document.getElementById("msg-" + snap.key);
+    if(el) el.remove();
+  });
+}
+
+function escapeHtml(text){
+  if(!text) return "";
+  return text.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'", "&#039;");
+}
+
+imgModal.onclick = () => { imgModal.style.display = "none"; modalImg.src = ""; imgModal.setAttribute("aria-hidden","true"); };
+
+generateBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Sign in first.");
+  const userRef = ref(db,`users/${user.uid}/inviteCodes`);
+  const snap = await get(userRef);
+  const codes = snap.exists() ? Object.keys(snap.val()) : [];
+  if(!ADMIN_EMAILS.includes(user.email) && codes.length >= 6) return alert("You can only create 6 invite codes.");
+  const newCode = Math.random().toString(36).substring(2,8).toUpperCase();
+  await set(ref(db,"inviteCodes/"+newCode), { used:false, creator:user.uid, createdAt: Date.now() });
+  await set(ref(db,`users/${user.uid}/inviteCodes/${newCode}`), { createdAt: Date.now() });
+  alert("New invite code generated. Click 'View Invite Codes' to see it.");
+};
+
+viewBtn.onclick = () => {
+  if(myCodesDiv.style.display === "none" || myCodesDiv.style.display === ""){
+    displayMyCodes();
+    myCodesDiv.style.display = "block";
+    viewBtn.textContent = "Hide Invite Codes";
+  } else {
+    myCodesDiv.style.display = "none";
+    viewBtn.textContent = "View Invite Codes";
+  }
+};
+
+async function displayMyCodes(){
+  const user = auth.currentUser;
+  if(!user) return myCodesDiv.innerText = "Sign in to see codes.";
+  const snap = await get(ref(db,`users/${user.uid}/inviteCodes`));
+  const codes = snap.exists() ? Object.keys(snap.val()) : [];
+  myCodesDiv.innerText = codes.length ? "Your codes: " + codes.join(", ") : "No invite codes yet";
+}
+
+logoutBtn.onclick = () => signOut(auth);
+
+labelStartText.addEventListener("input", () => {
+  const v = labelStartText.value.trim();
+  if(/^#([0-9A-Fa-f]{6})$/.test(v)) colorStart.value = v;
+});
+labelEndText.addEventListener("input", () => {
+  const v = labelEndText.value.trim();
+  if(/^#([0-9A-Fa-f]{6})$/.test(v)) colorEnd.value = v;
+});
+colorStart.addEventListener("input", () => { labelStartText.value = colorStart.value; });
+colorEnd.addEventListener("input", () => { labelEndText.value = colorEnd.value; });
+
+chatBox.addEventListener('DOMNodeInserted', e => {
+  const el = e.target;
+  if(el && el.classList && el.classList.contains('message')){
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+});
 </script>
 </body>
 </html>
-
