@@ -268,13 +268,22 @@ const ADMIN_EMAILS = [
 let messagesRef = null;
 let currentNickname = "Anonymous";
 let messageCache = new Map(); // Store messages with their timestamps
+let messageListener = null; // Store the listener reference
+let removeListener = null; // Store the remove listener reference
 
 /* helpers */
 function showError(msg){ document.getElementById("authError").innerText = msg || ""; }
 function clearMessages(){
   chatBox.innerHTML = "";
   messageCache.clear();
-  if(messagesRef) off(messagesRef);
+  loadedMessageKeys.clear();
+  if(messagesRef) {
+    if(messageListener) off(messagesRef, 'child_added', messageListener);
+    if(removeListener) off(messagesRef, 'child_removed', removeListener);
+  }
+  messageListener = null;
+  removeListener = null;
+  messagesRef = null;
 }
 
 /* auth handlers */
