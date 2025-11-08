@@ -343,6 +343,10 @@ onAuthStateChanged(auth, async user => {
 
     authContainer.style.display = "none";
     chatContainer.style.display = "block";
+    
+    // Clear messages before loading new ones
+    clearMessages();
+    
     // load user profile
     if(snap.exists()){
       currentNickname = snap.val().nickname || "Anonymous";
@@ -438,16 +442,26 @@ let isInitialLoad = true;
 let loadedMessageKeys = new Set();
 
 function loadMessages(){
-  if(messagesRef) off(messagesRef);
+  // Clean up existing listeners first
+  if(messagesRef) {
+    if(messageListener) off(messagesRef, 'child_added', messageListener);
+    if(removeListener) off(messagesRef, 'child_removed', removeListener);
+  }
+  
   chatBox.innerHTML = "";
   messageCache.clear();
   loadedMessageKeys.clear();
   isInitialLoad = true;
   messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
 
-  onChildAdded(messagesRef, async snap => {
+  messageListener = onChildAdded(messagesRef, async snap => {
     const msg = snap.val();
     const msgTimestamp = msg.timestamp || Date.now();
+    
+    // Prevent duplicates - check if we've already added this message
+    if(messageCache.has(snap.key)) {
+      return; // Skip if already in cache
+    }
     
     // Store in cache
     messageCache.set(snap.key, { msg, timestamp: msgTimestamp });
@@ -478,7 +492,7 @@ function loadMessages(){
     }
   });
 
-  onChildRemoved(ref(db,"messages"), snap => {
+  removeListener = onChildRemoved(ref(db,"messages"), snap => {
     messageCache.delete(snap.key);
     loadedMessageKeys.delete(snap.key);
     const el = document.getElementById("msg-" + snap.key);
@@ -522,6 +536,12 @@ async function renderAllMessages() {
 }
 
 async function renderMessage(key, msg) {
+  // Check if message already exists in DOM
+  const existingEl = document.getElementById("msg-" + key);
+  if(existingEl) {
+    return; // Don't render duplicates
+  }
+
   const wrapper = document.createElement("div");
   wrapper.className = "message";
   wrapper.id = "msg-" + key;
