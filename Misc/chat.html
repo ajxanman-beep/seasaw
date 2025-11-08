@@ -440,6 +440,7 @@ fileInput.addEventListener("change", async () => {
 /* Load messages and render names with colors - FIXED VERSION */
 let isInitialLoad = true;
 let loadedMessageKeys = new Set();
+let initialLoadComplete = false;
 
 function loadMessages(){
   // Clean up existing listeners first
@@ -452,7 +453,12 @@ function loadMessages(){
   messageCache.clear();
   loadedMessageKeys.clear();
   isInitialLoad = true;
+  initialLoadComplete = false;
   messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
+
+  // Track how many messages we expect to load initially
+  let initialMessageCount = 0;
+  let processedCount = 0;
 
   messageListener = onChildAdded(messagesRef, async snap => {
     const msg = snap.val();
@@ -467,6 +473,8 @@ function loadMessages(){
     messageCache.set(snap.key, { msg, timestamp: msgTimestamp });
     loadedMessageKeys.add(snap.key);
     
+    processedCount++;
+    
     // Check if this message is in correct chronological order
     const sortedKeys = Array.from(messageCache.entries())
       .sort((a, b) => a[1].timestamp - b[1].timestamp)
@@ -476,14 +484,18 @@ function loadMessages(){
     const isLastMessage = currentIndex === sortedKeys.length - 1;
     
     // If initial load or message is out of order, re-render all
-    if(isInitialLoad || !isLastMessage) {
+    if(!initialLoadComplete || !isLastMessage) {
       await renderAllMessages();
-      // After initial messages load, switch to append mode
-      if(loadedMessageKeys.size > 0) {
-        setTimeout(() => { isInitialLoad = false; }, 1000);
+      
+      // Mark initial load complete after a short delay
+      if(!initialLoadComplete && processedCount > 0) {
+        setTimeout(() => { 
+          initialLoadComplete = true;
+          isInitialLoad = false;
+        }, 500);
       }
     } else {
-      // Message is in order, just append it
+      // Message is in order and initial load is done, just append it
       await renderMessage(snap.key, msg);
       const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 100;
       if(wasScrolledToBottom) {
