@@ -5,148 +5,233 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Chat Room</title>
 <style>
-  :root {
-    --bg: #121212;
-    --card: #1f1f1f;
-    --muted: rgba(255,255,255,0.7);
-    --accent: #0078ff;
-  }
-  body{
-    margin:0;
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:Arial,Helvetica,sans-serif;
-    background:var(--bg);
-    color:#fff;
-  }
-  .container{
-    width:92%;
-    max-width:980px;
-    background:var(--card);
-    border-radius:12px;
-    padding:18px;
-    box-sizing:border-box;
-    border:1px solid #333;
-  }
-  #chatBox{
-    height:420px;
-    overflow:auto;
-    background:#222;
-    border-radius:8px;
-    padding:12px;
-    border:1px solid #333;
-  }
+  :root { --bg:#121212; --card:#1f1f1f; --muted:rgba(255,255,255,0.7); --accent:#0078ff; }
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:Arial,sans-serif; background:var(--bg); color:#fff; }
+  .container{ width:92%; max-width:980px; background:var(--card); border-radius:12px; padding:18px; box-sizing:border-box; border:1px solid #333; }
+  #chatBox{ height:420px; overflow:auto; background:#222; border-radius:8px; padding:12px; border:1px solid #333; }
   #inputArea{ display:flex; gap:10px; margin-top:12px; align-items:center; }
-  input[type="text"], input[type="email"], input[type="password"]{
-    padding:10px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; outline:none; flex:1;
-  }
+  input[type="text"], input[type="email"], input[type="password"]{ padding:10px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; outline:none; flex:1; }
   input[type="file"]{ padding:6px; }
   button{ padding:10px 12px; border-radius:6px; border:none; cursor:pointer; background:var(--accent); color:white; }
-  .btn-blue{ background:#0078ff; }
-  .btn-red{ background:#ff4444; }
-  .btn-green{ background:#00cc66; }
-  .btn-yellow{ background:#ffaa00; }
   .muted{ color:var(--muted); font-size:0.95rem; }
-  .message { margin-bottom:10px; line-height:1.3; padding:6px; border-radius:6px; }
   .delete-btn{ color:#ff6666; margin-left:10px; cursor:pointer; font-size:0.85rem; }
+  .chat-img, .chat-video{ display:block; max-width:320px; max-height:240px; margin-top:6px; border-radius:6px; cursor:pointer; }
+  #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
+  #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
 
-  /* Gradient animation fix */
-  .name {
-    font-weight:700;
-    display:inline-block;
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-    -webkit-text-fill-color: transparent;
-  }
-  .name.animated {
-    background: linear-gradient(270deg, #00ffff, #ff00ff, #00ffff);
-    background-size: 400% 400%;
-    animation: gradientFlow 6s ease infinite;
-  }
-  @keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
+  .name{ font-weight:700; display:inline-block; -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color: transparent; }
+  .name.static{ color:transparent; -webkit-text-fill-color: transparent; }
+  .name.animated{ color:transparent; -webkit-text-fill-color: transparent; background-size: 200% 100%; background-repeat:no-repeat; -webkit-background-clip:text; background-clip:text; animation: gradientShift var(--speed,5s) linear infinite; }
+  @keyframes gradientShift { 0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;} }
 
-  /* Admin panel styles */
-  #adminPanel {
-    background:#2a2a2a;
-    padding:12px;
-    border-radius:8px;
-    margin-top:12px;
-    border:1px solid #3a3a3a;
-  }
-  #gradientPanel {
-    display:none;
-    margin-top:10px;
-    background:#1e1e1e;
-    padding:10px;
-    border-radius:8px;
-  }
+  #adminColorPanel{ margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; display:none; border:1px solid #3a3a3a; }
+  #adminColorPanel label{ display:block; font-size:0.9rem; margin-top:6px; margin-bottom:4px; color:var(--muted); }
+  #adminColorPanel .row{ display:flex; gap:8px; align-items:center; margin-top:6px; }
+  #adminColorPanel input[type="color"]{ width:48px; height:36px; padding:0; border-radius:6px; border:none; }
+  #adminColorPanel input[type="number"]{ width:80px; padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; }
+
+  #adminControlPanel{ display:none; margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; border:1px solid #3a3a3a; }
+  #userList{ margin-top:8px; max-height:260px; overflow:auto; }
+  #dbManager{ display:none; margin-top:10px; background:#222; padding:8px; border-radius:8px; border:1px solid #333; }
+  .theme-swatch{ display:inline-block; width:36px; height:24px; border-radius:6px; border:1px solid #333; cursor:pointer; margin-right:6px; vertical-align:middle; }
+  .message{ margin-bottom:10px; line-height:1.3; padding:6px; border-radius:6px; }
+  @media(max-width:720px){ #chatBox{ height:300px; } .container{ padding:12px; } }
 </style>
 </head>
 <body>
 <div class="container" id="mainContainer">
-
-  <!-- Chat Box -->
-  <div id="chatBox">
-    <div><span class="name animated">AdminName 👑</span> <span class="muted">(12:00 PM):</span> Welcome to the improved chat!</div>
-  </div>
-
-  <!-- Input area -->
-  <div id="inputArea">
-    <input id="messageInput" type="text" placeholder="Type a message..." />
-    <input id="fileInput" type="file" accept="image/*,video/*" />
-    <button id="sendButton">Send</button>
-  </div>
-
-  <!-- Admin Controls -->
-  <div id="adminPanel">
-    <h3>Admin Controls</h3>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-      <button class="btn-red">Delete Msg</button>
-      <button class="btn-yellow">Mute User</button>
-      <button class="btn-yellow">Kick User</button>
-      <button class="btn-red">Ban User</button>
-      <button class="btn-green">Broadcast</button>
-      <button class="btn-blue">Manage Firebase</button>
-      <button class="btn-blue" id="toggleGradient">Toggle Gradient Panel</button>
-    </div>
-
-    <!-- Gradient Panel -->
-    <div id="gradientPanel">
-      <p style="margin:6px 0;">Admin Gradient Settings</p>
-      <label>Start Color: <input type="color" id="gradStart" value="#00ffff" /></label>
-      <label>End Color: <input type="color" id="gradEnd" value="#ff00ff" /></label>
-      <button class="btn-green" id="applyGradient">Apply Gradient</button>
+  <div id="authContainer">
+    <h2 style="margin:0 0 10px 0;">Sign In or Register</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <input id="email" type="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <input id="inviteCode" type="text" placeholder="Invite Code (for registration)" />
+      <div style="display:flex;gap:8px;">
+        <button id="loginBtn">Login</button>
+        <button id="registerBtn" style="background:#00aa88">Register</button>
+      </div>
+      <p id="authError" style="color:#ff6666;margin:0;"></p>
     </div>
   </div>
 
+  <div id="chatContainer" style="display:none;">
+    <div class="top-row">
+      <h2 style="margin:0">Chat Room</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button id="generateInviteBtn" style="background:#00cc66">Generate Invite</button>
+        <button id="viewCodesBtn" style="background:#ffaa00">View Invite Codes</button>
+        <div id="myCodes" class="small" style="display:none;"></div>
+      </div>
+    </div>
+    <div id="chatBox" aria-live="polite"></div>
+    <div id="inputArea">
+      <input id="messageInput" type="text" placeholder="Type a message..." />
+      <input id="fileInput" type="file" accept="image/*,video/*" />
+      <button id="sendButton">Send</button>
+      <button id="logoutBtn" style="background:#ff4444">Logout</button>
+    </div>
+
+    <div id="adminColorPanel">
+      <strong>Admin Name Color / Gradient</strong>
+      <div class="small">Choose start & end colors. If start === end, the name looks like a solid color.</div>
+      <label>Start color</label>
+      <div class="row">
+        <input id="colorStart" type="color" value="#00ffcc" />
+        <input id="labelStartText" type="text" placeholder="#00ffcc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
+      </div>
+      <label>End color (for gradient)</label>
+      <div class="row">
+        <input id="colorEnd" type="color" value="#ff00cc" />
+        <input id="labelEndText" type="text" placeholder="#ff00cc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
+        <label style="display:flex;gap:6px;align-items:center;"><input id="animatedToggle" type="checkbox" /> Animated gradient</label>
+        <label style="display:flex;gap:6px;align-items:center;">Speed (s): <input id="animSpeed" type="number" min="1" value="6" /></label>
+        <button id="saveColorBtn" style="margin-left:auto;background:#0078ff">Save Color</button>
+      </div>
+    </div>
+
+    <div id="adminControlPanel">
+      <strong>🛠 Admin Controls</strong>
+      <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+        <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
+        <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
+        <button id="dbManagerBtn" style="background:#aa66ff;">Manage Database</button>
+        <button id="themeBtn" style="background:#00cc88;">Change Chat Theme</button>
+        <button id="purgeBtn" style="background:#ff6666;">Purge All Messages</button>
+      </div>
+      <div id="userList" style="display:none; margin-top:12px;"></div>
+      <div id="dbManager" style="display:none; margin-top:12px;">
+        <strong>Realtime DB Manager</strong>
+        <div class="small">View top-level nodes and delete nodes. Dangerous: use with care.</div>
+        <div id="dbNodes" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="imgModal" aria-hidden="true">
+    <img id="modalImg" alt="Expanded"/>
+    <video id="modalVideo" controls style="display:none;"></video>
+  </div>
 </div>
 
-<script>
-const toggleBtn = document.getElementById("toggleGradient");
-const gradPanel = document.getElementById("gradientPanel");
-const applyBtn = document.getElementById("applyGradient");
-const startColor = document.getElementById("gradStart");
-const endColor = document.getElementById("gradEnd");
+<script type="module">
+// ====== Firebase Setup ======
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
 
-toggleBtn.onclick = () => {
-  gradPanel.style.display = gradPanel.style.display === "none" ? "block" : "none";
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-applyBtn.onclick = () => {
-  const nameEls = document.querySelectorAll(".name.animated");
-  nameEls.forEach(el => {
-    el.style.background = `linear-gradient(270deg, ${startColor.value}, ${endColor.value}, ${startColor.value})`;
-    el.style.backgroundSize = "400% 400%";
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+// ====== DOM Elements ======
+const authContainer = document.getElementById('authContainer');
+const chatContainer = document.getElementById('chatContainer');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('loginBtn');
+const registerBtn = document.getElementById('registerBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const authError = document.getElementById('authError');
+const messageInput = document.getElementById('messageInput');
+const sendButton = document.getElementById('sendButton');
+const chatBox = document.getElementById('chatBox');
+const fileInput = document.getElementById('fileInput');
+
+// ====== Admin Elements ======
+const adminColorPanel = document.getElementById('adminColorPanel');
+const colorStart = document.getElementById('colorStart');
+const colorEnd = document.getElementById('colorEnd');
+const labelStartText = document.getElementById('labelStartText');
+const labelEndText = document.getElementById('labelEndText');
+const animatedToggle = document.getElementById('animatedToggle');
+const animSpeed = document.getElementById('animSpeed');
+const saveColorBtn = document.getElementById('saveColorBtn');
+
+// ====== Helper Functions ======
+function renderMessage(data){
+  const div = document.createElement('div');
+  div.className = 'message';
+  const userSpan = document.createElement('span');
+  userSpan.textContent = data.username + ": ";
+  userSpan.className = 'name';
+  if(data.adminGradient){
+    userSpan.style.background = `linear-gradient(to right, ${data.adminGradient.start}, ${data.adminGradient.end})`;
+    if(data.adminGradient.animated){
+      userSpan.classList.add('animated');
+      userSpan.style.setProperty('--speed', data.adminGradient.speed + 's');
+    } else { userSpan.classList.add('static'); }
+  }
+  div.appendChild(userSpan);
+  const textNode = document.createTextNode(data.text);
+  div.appendChild(textNode);
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// ====== Auth ======
+loginBtn.onclick = () => {
+  const email = emailInput.value;
+  const pass = passwordInput.value;
+  signInWithEmailAndPassword(auth,email,pass)
+    .then(() => { authContainer.style.display='none'; chatContainer.style.display='block'; checkAdmin(); })
+    .catch(e=>authError.textContent=e.message);
+};
+registerBtn.onclick = () => {
+  const email = emailInput.value;
+  const pass = passwordInput.value;
+  createUserWithEmailAndPassword(auth,email,pass)
+    .then(()=>{ authContainer.style.display='none'; chatContainer.style.display='block'; })
+    .catch(e=>authError.textContent=e.message);
+};
+logoutBtn.onclick = ()=>{ signOut(auth).then(()=>{ authContainer.style.display='flex'; chatContainer.style.display='none'; }) };
+
+// ====== Chat ======
+sendButton.onclick = ()=>{ sendMessage(); }
+messageInput.addEventListener('keypress', e=>{ if(e.key==='Enter'){ sendMessage(); }});
+
+function sendMessage(){
+  if(!messageInput.value) return;
+  push(ref(db,'messages'),{
+    username: auth.currentUser.email.split('@')[0],
+    text: messageInput.value,
+    timestamp: Date.now()
   });
+  messageInput.value='';
+}
+
+// Listen for messages
+onValue(ref(db,'messages'), snapshot=>{
+  chatBox.innerHTML='';
+  snapshot.forEach(child=>{
+    renderMessage(child.val());
+  });
+});
+
+// ====== Admin ======
+function checkAdmin(){
+  // Simple example: email "admin@chat.com" is admin
+  if(auth.currentUser.email==='admin@chat.com'){
+    adminColorPanel.style.display='block';
+  }
+}
+saveColorBtn.onclick = ()=>{
+  const gradient = {start:colorStart.value,end:colorEnd.value,animated:animatedToggle.checked,speed:animSpeed.value};
+  alert('Admin gradient saved! (demo, apply in real app)');
 };
 </script>
-
 </body>
 </html>
+
