@@ -177,6 +177,7 @@
       <div id="adminControlPanel">
         <strong>🛠 Admin Controls</strong>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+          <button id="nameColorBtn" style="background:#9333ea;">Name Color/Gradient</button>
           <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
           <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
           <button id="dbManagerBtn" style="background:#aa66ff;">Manage Database</button>
@@ -338,7 +339,7 @@ onAuthStateChanged(auth, async user => {
       currentNickname = snap.val().nickname || "Anonymous";
       // populate admin color inputs if admin and have color saved
       if(ADMIN_EMAILS.includes(user.email)){
-        adminPanel.style.display = "block";
+        adminPanel.style.display = "none";
         document.getElementById("adminControlPanel").style.display = "block";
         const col = snap.val().color || null;
         if(col){
@@ -696,6 +697,15 @@ labelEndText.addEventListener("input", () => {
 });
 colorStart.addEventListener("input", () => { labelStartText.value = colorStart.value; });
 colorEnd.addEventListener("input", () => { labelEndText.value = colorEnd.value; });
+
+/* Toggle admin color panel with button */
+document.getElementById("nameColorBtn").onclick = () => {
+  if(adminPanel.style.display === "none" || adminPanel.style.display === ""){
+    adminPanel.style.display = "block";
+  } else {
+    adminPanel.style.display = "none";
+  }
+};
 
 /* ADMIN: View all users and manage them (now with unkick/unban and admin protections) */
 const userListDiv = document.getElementById("userList");
