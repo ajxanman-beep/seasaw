@@ -266,11 +266,13 @@ const ADMIN_EMAILS = [
 
 let messagesRef = null;
 let currentNickname = "Anonymous";
+let messageCache = new Map(); // Store messages with their timestamps
 
 /* helpers */
 function showError(msg){ document.getElementById("authError").innerText = msg || ""; }
 function clearMessages(){
   chatBox.innerHTML = "";
+  messageCache.clear();
   if(messagesRef) off(messagesRef);
 }
 
@@ -384,7 +386,7 @@ async function sendMessage(text="", imageUrl=""){
   const userSnap = await get(ref(db,"users/"+user.uid));
   if(userSnap.exists()){
     const u = userSnap.val();
-    if(u.kicked) return alert("You’ve been kicked. Please rejoin later.");
+    if(u.kicked) return alert("You've been kicked. Please rejoin later.");
     if(u.banned) return alert("You are banned.");
     if(u.muted) return alert("You are muted and cannot send messages.");
   }
@@ -421,136 +423,161 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-/* Load messages and render names with colors */
+/* Load messages and render names with colors - FIXED VERSION */
 function loadMessages(){
   if(messagesRef) off(messagesRef);
   chatBox.innerHTML = "";
+  messageCache.clear();
   messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
-  const messageElements = {};
 
   onChildAdded(messagesRef, async snap => {
     const msg = snap.val();
-    const wrapper = document.createElement("div");
-    wrapper.className = "message";
-    wrapper.id = "msg-" + snap.key;
+    const msgTimestamp = msg.timestamp || Date.now();
+    
+    // Store in cache
+    messageCache.set(snap.key, { msg, timestamp: msgTimestamp });
+    
+    // Render all messages in order
+    await renderAllMessages();
+  });
 
-    // format time
-    const d = new Date(msg.timestamp || Date.now());
-    const hours = d.getHours();
-    const minutes = d.getMinutes().toString().padStart(2,"0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHour = ((hours + 11) % 12) + 1;
-    const timeStr = `${displayHour}:${minutes} ${ampm}`;
+  onChildRemoved(ref(db,"messages"), snap => {
+    messageCache.delete(snap.key);
+    renderAllMessages();
+  });
+}
 
-    // suffix mapping
-    const SUFFIXES = {
-      "aj.xanman@gmail.com": " 👑",
-      "alexa_pears736@ahschools.us": " 👑",
-      "uyiog_aghay195@ahschools.us": " 🐉",
-      "carso_keller363@ahschools.us": " ⚡",
-      "legyo_dereg506@ahschools.us": " ⚡",
-      "jacks_waara234@ahschools.us": " ⚡",
-      "unclesam@gmail.com": " ⚡",
-      "o71613869@gmail.com": " 🐉"
-    };
-    const suffix = SUFFIXES[msg.email] || "";
+async function renderAllMessages() {
+  const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 50;
+  
+  // Sort messages by timestamp
+  const sortedMessages = Array.from(messageCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp);
+  
+  chatBox.innerHTML = "";
+  
+  for (const [key, data] of sortedMessages) {
+    await renderMessage(key, data.msg);
+  }
+  
+  if (wasScrolledToBottom) {
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+}
 
-    // determine name style: fetch user profile by uid (if available)
-    let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
-    if(msg.uid){
-      try{
-        const userSnap = await get(ref(db,"users/"+msg.uid));
-        if(userSnap.exists()){
-          const u = userSnap.val();
-          if(u.color){
-            const start = u.color.start || "#ffffff";
-            const end = u.color.end || start;
-            const animated = !!u.color.animated;
-            const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
+async function renderMessage(key, msg) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "message";
+  wrapper.id = "msg-" + key;
 
-            const bg = `linear-gradient(90deg, ${start}, ${end})`;
-            if(animated){
-              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
-            } else {
-              // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
-              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
-            }
+  // format time
+  const d = new Date(msg.timestamp || Date.now());
+  const hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2,"0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const displayHour = ((hours + 11) % 12) + 1;
+  const timeStr = `${displayHour}:${minutes} ${ampm}`;
+
+  // suffix mapping
+  const SUFFIXES = {
+    "aj.xanman@gmail.com": " 👑",
+    "alexa_pears736@ahschools.us": " 👑",
+    "uyiog_aghay195@ahschools.us": " 🐉",
+    "carso_keller363@ahschools.us": " ⚡",
+    "legyo_dereg506@ahschools.us": " ⚡",
+    "jacks_waara234@ahschools.us": " ⚡",
+    "unclesam@gmail.com": " ⚡",
+    "o71613869@gmail.com": " 🐉"
+  };
+  const suffix = SUFFIXES[msg.email] || "";
+
+  // determine name style: fetch user profile by uid (if available)
+  let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
+  if(msg.uid){
+    try{
+      const userSnap = await get(ref(db,"users/"+msg.uid));
+      if(userSnap.exists()){
+        const u = userSnap.val();
+        if(u.color){
+          const start = u.color.start || "#ffffff";
+          const end = u.color.end || start;
+          const animated = !!u.color.animated;
+          const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
+
+          const bg = `linear-gradient(90deg, ${start}, ${end})`;
+          if(animated){
+            nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
           } else {
-            nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+            // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
+            nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
           }
         } else {
           nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
         }
-      }catch(e){
+      } else {
         nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
       }
+    }catch(e){
+      nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
     }
+  }
 
-    // system message styling
-    if(msg.uid === "SYSTEM"){
-      wrapper.style.background = "#2b2b2b";
-      wrapper.style.borderLeft = "4px solid #ffaa00";
-      wrapper.style.padding = "8px";
+  // system message styling
+  if(msg.uid === "SYSTEM"){
+    wrapper.style.background = "#2b2b2b";
+    wrapper.style.borderLeft = "4px solid #ffaa00";
+    wrapper.style.padding = "8px";
+  }
+
+  // build message content
+  let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
+  if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
+  if(msg.imageUrl){
+    const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
+    if(isVideo){
+      content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
+    } else {
+      content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
     }
+  }
 
-    // build message content
-    let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
-    if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
-    if(msg.imageUrl){
-      const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
-      if(isVideo){
-        content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
-      } else {
-        content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
-      }
+  wrapper.innerHTML = content;
+
+  // delete button if owner or admin (admins cannot delete other admins' messages)
+  const currentUser = auth.currentUser;
+  if(currentUser){
+    const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
+    const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
+    if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
+      const del = document.createElement("span");
+      del.className = "delete-btn";
+      del.textContent = "[delete]";
+      del.onclick = () => {
+        if(confirm("Delete this message?")) remove(ref(db,"messages/"+key));
+      };
+      wrapper.appendChild(del);
     }
+  }
 
-    wrapper.innerHTML = content;
+  chatBox.appendChild(wrapper);
 
-    // delete button if owner or admin (admins cannot delete other admins' messages)
-    const currentUser = auth.currentUser;
-    if(currentUser){
-      const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
-      const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
-      if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
-        const del = document.createElement("span");
-        del.className = "delete-btn";
-        del.textContent = "[delete]";
-        del.onclick = () => {
-          if(confirm("Delete this message?")) remove(ref(db,"messages/"+snap.key));
-        };
-        wrapper.appendChild(del);
-      }
-    }
-
-    chatBox.appendChild(wrapper);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // image/video modal click
-    const img = wrapper.querySelector(".chat-img");
-    const vid = wrapper.querySelector("video.chat-video");
-    if(img) img.onclick = () => {
-      modalVideo.style.display = "none";
-      modalImg.style.display = "block";
-      modalImg.src = img.src;
-      imgModal.style.display = "flex";
-      imgModal.setAttribute("aria-hidden","false");
-    };
-    if(vid) vid.onclick = () => {
-      modalImg.style.display = "none";
-      modalVideo.style.display = "block";
-      modalVideo.src = vid.src;
-      imgModal.style.display = "flex";
-      imgModal.setAttribute("aria-hidden","false");
-    };
-
-    messageElements[snap.key] = wrapper;
-  });
-
-  onChildRemoved(ref(db,"messages"), snap => {
-    const el = document.getElementById("msg-" + snap.key);
-    if(el) el.remove();
-  });
+  // image/video modal click
+  const img = wrapper.querySelector(".chat-img");
+  const vid = wrapper.querySelector("video.chat-video");
+  if(img) img.onclick = () => {
+    modalVideo.style.display = "none";
+    modalImg.style.display = "block";
+    modalImg.src = img.src;
+    imgModal.style.display = "flex";
+    imgModal.setAttribute("aria-hidden","false");
+  };
+  if(vid) vid.onclick = () => {
+    modalImg.style.display = "none";
+    modalVideo.style.display = "block";
+    modalVideo.src = vid.src;
+    imgModal.style.display = "flex";
+    imgModal.setAttribute("aria-hidden","false");
+  };
 }
 
 /* small utility to escape HTML in messages */
@@ -623,14 +650,6 @@ labelEndText.addEventListener("input", () => {
 });
 colorStart.addEventListener("input", () => { labelStartText.value = colorStart.value; });
 colorEnd.addEventListener("input", () => { labelEndText.value = colorEnd.value; });
-
-/* ensure chat stays scrolled on new messages when focus not on older ones */
-chatBox.addEventListener('DOMNodeInserted', e => {
-  const el = e.target;
-  if(el && el.classList && el.classList.contains('message')){
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
-});
 
 /* ADMIN: View all users and manage them (now with unkick/unban and admin protections) */
 const userListDiv = document.getElementById("userList");
