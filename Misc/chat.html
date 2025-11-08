@@ -177,7 +177,6 @@
       <div id="adminControlPanel">
         <strong>🛠 Admin Controls</strong>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
-          <button id="nameColorBtn" style="background:#9333ea;">Name Color/Gradient</button>
           <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
           <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
           <button id="dbManagerBtn" style="background:#aa66ff;">Manage Database</button>
@@ -267,23 +266,12 @@ const ADMIN_EMAILS = [
 
 let messagesRef = null;
 let currentNickname = "Anonymous";
-let messageCache = new Map(); // Store messages with their timestamps
-let messageListener = null; // Store the listener reference
-let removeListener = null; // Store the remove listener reference
 
 /* helpers */
 function showError(msg){ document.getElementById("authError").innerText = msg || ""; }
 function clearMessages(){
   chatBox.innerHTML = "";
-  messageCache.clear();
-  loadedMessageKeys.clear();
-  if(messagesRef) {
-    if(messageListener) off(messagesRef, 'child_added', messageListener);
-    if(removeListener) off(messagesRef, 'child_removed', removeListener);
-  }
-  messageListener = null;
-  removeListener = null;
-  messagesRef = null;
+  if(messagesRef) off(messagesRef);
 }
 
 /* auth handlers */
@@ -343,16 +331,12 @@ onAuthStateChanged(auth, async user => {
 
     authContainer.style.display = "none";
     chatContainer.style.display = "block";
-    
-    // Clear messages before loading new ones
-    clearMessages();
-    
     // load user profile
     if(snap.exists()){
       currentNickname = snap.val().nickname || "Anonymous";
       // populate admin color inputs if admin and have color saved
       if(ADMIN_EMAILS.includes(user.email)){
-        adminPanel.style.display = "none";
+        adminPanel.style.display = "block";
         document.getElementById("adminControlPanel").style.display = "block";
         const col = snap.val().color || null;
         if(col){
@@ -400,7 +384,7 @@ async function sendMessage(text="", imageUrl=""){
   const userSnap = await get(ref(db,"users/"+user.uid));
   if(userSnap.exists()){
     const u = userSnap.val();
-    if(u.kicked) return alert("You've been kicked. Please rejoin later.");
+    if(u.kicked) return alert("You’ve been kicked. Please rejoin later.");
     if(u.banned) return alert("You are banned.");
     if(u.muted) return alert("You are muted and cannot send messages.");
   }
@@ -437,235 +421,136 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-/* Load messages and render names with colors - FIXED VERSION */
-let isInitialLoad = true;
-let loadedMessageKeys = new Set();
-let initialLoadComplete = false;
-
+/* Load messages and render names with colors */
 function loadMessages(){
-  // Clean up existing listeners first
-  if(messagesRef) {
-    if(messageListener) off(messagesRef, 'child_added', messageListener);
-    if(removeListener) off(messagesRef, 'child_removed', removeListener);
-  }
-  
+  if(messagesRef) off(messagesRef);
   chatBox.innerHTML = "";
-  messageCache.clear();
-  loadedMessageKeys.clear();
-  isInitialLoad = true;
-  initialLoadComplete = false;
   messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
+  const messageElements = {};
 
-  // Track how many messages we expect to load initially
-  let initialMessageCount = 0;
-  let processedCount = 0;
-
-  messageListener = onChildAdded(messagesRef, async snap => {
+  onChildAdded(messagesRef, async snap => {
     const msg = snap.val();
-    const msgTimestamp = msg.timestamp || Date.now();
-    
-    // Prevent duplicates - check if we've already added this message
-    if(messageCache.has(snap.key)) {
-      return; // Skip if already in cache
-    }
-    
-    // Store in cache
-    messageCache.set(snap.key, { msg, timestamp: msgTimestamp });
-    loadedMessageKeys.add(snap.key);
-    
-    processedCount++;
-    
-    // Check if this message is in correct chronological order
-    const sortedKeys = Array.from(messageCache.entries())
-      .sort((a, b) => a[1].timestamp - b[1].timestamp)
-      .map(entry => entry[0]);
-    
-    const currentIndex = sortedKeys.indexOf(snap.key);
-    const isLastMessage = currentIndex === sortedKeys.length - 1;
-    
-    // If initial load or message is out of order, re-render all
-    if(!initialLoadComplete || !isLastMessage) {
-      await renderAllMessages();
-      
-      // Mark initial load complete after a short delay
-      if(!initialLoadComplete && processedCount > 0) {
-        setTimeout(() => { 
-          initialLoadComplete = true;
-          isInitialLoad = false;
-        }, 500);
-      }
-    } else {
-      // Message is in order and initial load is done, just append it
-      await renderMessage(snap.key, msg);
-      const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 100;
-      if(wasScrolledToBottom) {
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
-    }
-  });
+    const wrapper = document.createElement("div");
+    wrapper.className = "message";
+    wrapper.id = "msg-" + snap.key;
 
-  removeListener = onChildRemoved(ref(db,"messages"), snap => {
-    messageCache.delete(snap.key);
-    loadedMessageKeys.delete(snap.key);
-    const el = document.getElementById("msg-" + snap.key);
-    if(el) el.remove();
-  });
-}
+    // format time
+    const d = new Date(msg.timestamp || Date.now());
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2,"0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const displayHour = ((hours + 11) % 12) + 1;
+    const timeStr = `${displayHour}:${minutes} ${ampm}`;
 
-async function renderAllMessages() {
-  const wasScrolledToBottom = chatBox.scrollHeight - chatBox.scrollTop <= chatBox.clientHeight + 100;
-  const scrollPos = chatBox.scrollTop;
-  
-  // Sort messages by timestamp
-  const sortedMessages = Array.from(messageCache.entries())
-    .sort((a, b) => a[1].timestamp - b[1].timestamp);
-  
-  // Save existing message elements to avoid re-fetching user data
-  const existingElements = new Map();
-  sortedMessages.forEach(([key]) => {
-    const el = document.getElementById("msg-" + key);
-    if(el) existingElements.set(key, el);
-  });
-  
-  chatBox.innerHTML = "";
-  
-  for (const [key, data] of sortedMessages) {
-    if(existingElements.has(key)) {
-      // Reuse existing element
-      chatBox.appendChild(existingElements.get(key));
-    } else {
-      // Render new message
-      await renderMessage(key, data.msg);
-    }
-  }
-  
-  if (wasScrolledToBottom) {
-    chatBox.scrollTop = chatBox.scrollHeight;
-  } else if(!isInitialLoad) {
-    // Try to maintain scroll position during re-render
-    chatBox.scrollTop = scrollPos;
-  }
-}
+    // suffix mapping
+    const SUFFIXES = {
+      "aj.xanman@gmail.com": " 👑",
+      "alexa_pears736@ahschools.us": " 👑",
+      "uyiog_aghay195@ahschools.us": " 🐉",
+      "carso_keller363@ahschools.us": " ⚡",
+      "legyo_dereg506@ahschools.us": " ⚡",
+      "jacks_waara234@ahschools.us": " ⚡",
+      "unclesam@gmail.com": " ⚡",
+      "o71613869@gmail.com": " 🐉"
+    };
+    const suffix = SUFFIXES[msg.email] || "";
 
-async function renderMessage(key, msg) {
-  // Check if message already exists in DOM
-  const existingEl = document.getElementById("msg-" + key);
-  if(existingEl) {
-    return; // Don't render duplicates
-  }
+    // determine name style: fetch user profile by uid (if available)
+    let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
+    if(msg.uid){
+      try{
+        const userSnap = await get(ref(db,"users/"+msg.uid));
+        if(userSnap.exists()){
+          const u = userSnap.val();
+          if(u.color){
+            const start = u.color.start || "#ffffff";
+            const end = u.color.end || start;
+            const animated = !!u.color.animated;
+            const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "message";
-  wrapper.id = "msg-" + key;
-
-  // format time
-  const d = new Date(msg.timestamp || Date.now());
-  const hours = d.getHours();
-  const minutes = d.getMinutes().toString().padStart(2,"0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  const displayHour = ((hours + 11) % 12) + 1;
-  const timeStr = `${displayHour}:${minutes} ${ampm}`;
-
-  // suffix mapping
-  const SUFFIXES = {
-    "aj.xanman@gmail.com": " 👑",
-    "alexa_pears736@ahschools.us": " 👑",
-    "uyiog_aghay195@ahschools.us": " 🐉",
-    "carso_keller363@ahschools.us": " ⚡",
-    "legyo_dereg506@ahschools.us": " ⚡",
-    "jacks_waara234@ahschools.us": " ⚡",
-    "unclesam@gmail.com": " ⚡",
-    "o71613869@gmail.com": " 🐉"
-  };
-  const suffix = SUFFIXES[msg.email] || "";
-
-  // determine name style: fetch user profile by uid (if available)
-  let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
-  if(msg.uid){
-    try{
-      const userSnap = await get(ref(db,"users/"+msg.uid));
-      if(userSnap.exists()){
-        const u = userSnap.val();
-        if(u.color){
-          const start = u.color.start || "#ffffff";
-          const end = u.color.end || start;
-          const animated = !!u.color.animated;
-          const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
-
-          const bg = `linear-gradient(90deg, ${start}, ${end})`;
-          if(animated){
-            nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
+            const bg = `linear-gradient(90deg, ${start}, ${end})`;
+            if(animated){
+              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
+            } else {
+              // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
+              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
+            }
           } else {
-            // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
-            nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
+            nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
           }
         } else {
           nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
         }
-      } else {
+      }catch(e){
         nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
       }
-    }catch(e){
-      nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
     }
-  }
 
-  // system message styling
-  if(msg.uid === "SYSTEM"){
-    wrapper.style.background = "#2b2b2b";
-    wrapper.style.borderLeft = "4px solid #ffaa00";
-    wrapper.style.padding = "8px";
-  }
-
-  // build message content
-  let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
-  if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
-  if(msg.imageUrl){
-    const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
-    if(isVideo){
-      content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
-    } else {
-      content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+    // system message styling
+    if(msg.uid === "SYSTEM"){
+      wrapper.style.background = "#2b2b2b";
+      wrapper.style.borderLeft = "4px solid #ffaa00";
+      wrapper.style.padding = "8px";
     }
-  }
 
-  wrapper.innerHTML = content;
-
-  // delete button if owner or admin (admins cannot delete other admins' messages)
-  const currentUser = auth.currentUser;
-  if(currentUser){
-    const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
-    const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
-    if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
-      const del = document.createElement("span");
-      del.className = "delete-btn";
-      del.textContent = "[delete]";
-      del.onclick = () => {
-        if(confirm("Delete this message?")) remove(ref(db,"messages/"+key));
-      };
-      wrapper.appendChild(del);
+    // build message content
+    let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
+    if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
+    if(msg.imageUrl){
+      const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
+      if(isVideo){
+        content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
+      } else {
+        content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+      }
     }
-  }
 
-  chatBox.appendChild(wrapper);
+    wrapper.innerHTML = content;
 
-  // image/video modal click
-  const img = wrapper.querySelector(".chat-img");
-  const vid = wrapper.querySelector("video.chat-video");
-  if(img) img.onclick = () => {
-    modalVideo.style.display = "none";
-    modalImg.style.display = "block";
-    modalImg.src = img.src;
-    imgModal.style.display = "flex";
-    imgModal.setAttribute("aria-hidden","false");
-  };
-  if(vid) vid.onclick = () => {
-    modalImg.style.display = "none";
-    modalVideo.style.display = "block";
-    modalVideo.src = vid.src;
-    imgModal.style.display = "flex";
-    imgModal.setAttribute("aria-hidden","false");
-  };
+    // delete button if owner or admin (admins cannot delete other admins' messages)
+    const currentUser = auth.currentUser;
+    if(currentUser){
+      const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
+      const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
+      if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
+        const del = document.createElement("span");
+        del.className = "delete-btn";
+        del.textContent = "[delete]";
+        del.onclick = () => {
+          if(confirm("Delete this message?")) remove(ref(db,"messages/"+snap.key));
+        };
+        wrapper.appendChild(del);
+      }
+    }
+
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // image/video modal click
+    const img = wrapper.querySelector(".chat-img");
+    const vid = wrapper.querySelector("video.chat-video");
+    if(img) img.onclick = () => {
+      modalVideo.style.display = "none";
+      modalImg.style.display = "block";
+      modalImg.src = img.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+    if(vid) vid.onclick = () => {
+      modalImg.style.display = "none";
+      modalVideo.style.display = "block";
+      modalVideo.src = vid.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+
+    messageElements[snap.key] = wrapper;
+  });
+
+  onChildRemoved(ref(db,"messages"), snap => {
+    const el = document.getElementById("msg-" + snap.key);
+    if(el) el.remove();
+  });
 }
 
 /* small utility to escape HTML in messages */
@@ -739,14 +624,13 @@ labelEndText.addEventListener("input", () => {
 colorStart.addEventListener("input", () => { labelStartText.value = colorStart.value; });
 colorEnd.addEventListener("input", () => { labelEndText.value = colorEnd.value; });
 
-/* Toggle admin color panel with button */
-document.getElementById("nameColorBtn").onclick = () => {
-  if(adminPanel.style.display === "none" || adminPanel.style.display === ""){
-    adminPanel.style.display = "block";
-  } else {
-    adminPanel.style.display = "none";
+/* ensure chat stays scrolled on new messages when focus not on older ones */
+chatBox.addEventListener('DOMNodeInserted', e => {
+  const el = e.target;
+  if(el && el.classList && el.classList.contains('message')){
+    chatBox.scrollTop = chatBox.scrollHeight;
   }
-};
+});
 
 /* ADMIN: View all users and manage them (now with unkick/unban and admin protections) */
 const userListDiv = document.getElementById("userList");
