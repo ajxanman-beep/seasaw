@@ -1,57 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Misc Page</title>
-  <style>
-    body {
-      margin: 0;
-      background-color: black;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Proxy Testing For My Friend Alex</title>
+<style>
+  :root{
+    --fg: #ffffff;
+    --muted: rgba(255,255,255,0.85);
+    --card-bg: rgba(0,0,0,0.18);
+  }
+  html,body{height:100%;margin:0}
+  body{
+    font-family: Arial, Helvetica, sans-serif;
+    color:var(--fg);
+    padding:24px;
+    background: linear-gradient(120deg,
+      #ff004d 0%,
+      #ff7300 12.5%,
+      #ffee00 25%,
+      #33ff00 37.5%,
+      #00ffd5 50%,
+      #0066ff 62.5%,
+      #6a00ff 75%,
+      #ff00c8 87.5%,
+      #ff004d 100%);
+    background-size: 240% 240%;
+    animation: rainbowShift 36s linear infinite;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+  }
+  @keyframes rainbowShift{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+  }
 
-    .top-bar {
-      background-color: #000;
-      padding: 10px;
-      text-align: center;
-      border-bottom: 2px solid #222;
-    }
+  .card{
+    width:100%;
+    max-width:1120px;
+    background:var(--card-bg);
+    border-radius:12px;
+    padding:18px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.35);
+    backdrop-filter: blur(6px);
+  }
 
-    iframe {
-      flex: 1;
-      width: 100%;
-      border: none;
-    }
-
-    button {
-      background-color: #005eff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 6px 10px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:hover {
-      background-color: #0074ff;
-    }
-  </style>
+  header {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    justify-content:space-between;
+  }
+  h2{margin:0;font-size:1.3rem}
+  .controls{
+    margin-top:12px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  input#url{
+    flex:1 1 60%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.02);
+    color:var(--fg);
+    min-width:220px;
+  }
+  select, button{
+    padding:9px 12px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.03);
+    color:var(--fg);
+    cursor:pointer;
+  }
+  button.secondary{ background: transparent; border:1px dashed rgba(255,255,255,0.12) }
+  .side-actions{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  #status{ margin-top:12px; color:var(--muted); min-height:1.2em }
+  iframe{
+    width:100%;
+    height:640px;
+    margin-top:16px;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.12);
+    background:white;
+  }
+  footer{ margin-top:10px; text-align:right; color:var(--muted); font-size:0.9rem }
+  @media(max-width:720px){
+    .controls{flex-direction:column;align-items:stretch}
+    .side-actions{justify-content:space-between}
+    iframe{height:520px}
+  }
+</style>
 </head>
 <body>
-  <div class="top-bar">
-    <button onclick="window.location.href='../index.html'">← Back to Launcher</button>
-    <h2>Misc Page</h2>
+  <div class="card" role="main">
+    <header>
+      <div>
+        <h2>Proxy Testing For My Friend Alex</h2>
+        <div style="color:var(--muted);font-size:0.95rem">Enter a URL and pick a proxy (dev/testing only).</div>
+      </div>
+      <div class="side-actions">
+        <!-- side button that navigates to the site you requested -->
+        <button id="seesawBtn" title="Open Seasaw (new tab)">Open Seasaw</button>
+      </div>
+    </header>
+
+    <div class="controls" style="margin-top:12px;">
+      <input id="url" placeholder="https://example.com" spellcheck="false" autocapitalize="none" />
+      <select id="proxySelect" title="Select proxy"></select>
+      <button id="loadBtn">Load</button>
+      <button id="nextBtn" class="secondary" title="Try next proxy">Try next proxy</button>
+      <button id="openBtn" class="secondary" title="Open target (no proxy)">Open target</button>
+    </div>
+
+    <div id="status">Ready. Tip: press Enter to load.</div>
+
+    <iframe id="frame" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+
+    <footer>Public proxies are for testing only — they may be rate-limited or log traffic.</footer>
   </div>
 
-  <!-- ✅ Embed the external site -->
-  <iframe
-    src="https://peppermint995.github.io/Proxy-Testing/"
-    allowfullscreen>
-  </iframe>
+<script>
+/* ------------------------
+   Proxies (tested/dev)
+   - type: 'encode' => append encoded URL
+   - type: 'prefix' => append raw URL
+   These are known public dev proxies; availability may change.
+   Sources used to build this list: AllOrigins, CORS.lol, CodeTabs, CorsProxy.io, Corsfix, ThingProxy, bridged.cc, CORS-Anywhere docs. 
+   ------------------------ */
+const proxies = [
+  { name: 'AllOrigins (raw)', url: 'https://api.allorigins.win/raw?url=', type: 'encode' },
+  { name: 'CORS.lol', url: 'https://api.cors.lol/?url=', type: 'encode' },
+  { name: 'CodeTabs (quest)', url: 'https://api.codetabs.com/v1/proxy?quest=', type: 'encode' },
+  { name: 'CorsProxy.io', url: 'https://corsproxy.io/?url=', type: 'encode' },
+  { name: 'CorsFix (free)', url: 'https://proxy.corsfix.com/?url=', type: 'encode' },
+  { name: 'ThingProxy (Freeboard)', url: 'https://thingproxy.freeboard.io/fetch/', type: 'prefix' },
+  { name: 'Bridged CORS (bridged.cc)', url: 'https://cors.bridged.cc/', type: 'prefix' },
+  { name: 'CORS-Anywhere (demo)', url: 'https://cors-anywhere.herokuapp.com/', type: 'prefix' },
+  { name: 'Bromine', url: 'https://bromineproxy.netlify.app/?utm_source=your-site&utm_medium=referral&utm_campaign=your-site&url=https://example.com', type: 'prefix' }
+];
+
+// populate proxy select
+const select = document.getElementById('proxySelect');
+proxies.forEach((p, i) => {
+  const opt = document.createElement('option');
+  opt.value = i;
+  opt.textContent = p.name;
+  select.appendChild(opt);
+});
+
+// elements
+const urlInput = document.getElementById('url');
+const frame = document.getElementById('frame');
+const status = document.getElementById('status');
+let currentIndex = 0;
+select.selectedIndex = 0;
+
+// play click sound using WebAudio (no files)
+function playClick() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.value = 1000;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+    o.connect(g); g.connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.19);
+  } catch(e) { /* ignore audio errors */ }
+}
+
+// build proxied URL properly for each proxy type
+function buildProxiedUrl(proxy, target) {
+  if (!/^https?:\/\//i.test(target)) target = 'https://' + target;
+  if (proxy.type === 'encode') return proxy.url + encodeURIComponent(target);
+  return proxy.url + target;
+}
+
+function setStatus(txt) {
+  status.textContent = txt;
+}
+
+// main load function
+function loadProxy() {
+  playClick();
+  const target = urlInput.value.trim();
+  if (!target) return alert('Please enter a URL (https://...)');
+  currentIndex = parseInt(select.value, 10) || 0;
+  const proxy = proxies[currentIndex];
+  const proxiedUrl = buildProxiedUrl(proxy, target);
+  setStatus(`Loading via ${proxy.name}...`);
+  frame.src = proxiedUrl;
+
+  // best-effort check after a short delay
+  setTimeout(() => {
+    try {
+      // trying to inspect cross-origin frame may throw; this is best-effort
+      const doc = frame.contentDocument;
+      if (!doc || !doc.body || doc.body.innerHTML.trim() === '') {
+        setStatus(`Tried ${proxy.name}. If the iframe is blank the proxy or target blocked framing — click "Try next proxy".`);
+      } else {
+        setStatus(`Loaded via ${proxy.name}.`);
+      }
+    } catch (err) {
+      // cross-origin, assume request sent; user should see content if framing allowed
+      setStatus(`Request sent via ${proxy.name}. If blank, that proxy/target blocked framing — click "Try next proxy".`);
+    }
+  }, 3500);
+}
+
+// try next proxy in list
+function tryNextProxy() {
+  playClick();
+  currentIndex = (currentIndex + 1) % proxies.length;
+  select.selectedIndex = currentIndex;
+  loadProxy();
+}
+
+// open raw target (no proxy)
+function openTarget() {
+  playClick();
+  let url = urlInput.value.trim();
+  if (!url) return alert('Enter a URL first.');
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  window.open(url, '_blank');
+}
+
+// open the seasaw site you requested in a new tab
+document.getElementById('seesawBtn').addEventListener('click', () => {
+  playClick();
+  window.open('https://ajxanman-beep.github.io/seasaw/index.html', '_blank');
+});
+
+// button wiring and keyboard shortcut
+document.getElementById('loadBtn').addEventListener('click', loadProxy);
+document.getElementById('nextBtn').addEventListener('click', tryNextProxy);
+document.getElementById('openBtn').addEventListener('click', openTarget);
+
+urlInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadProxy();
+});
+
+// when user changes select update index
+select.addEventListener('change', () => {
+  currentIndex = parseInt(select.value, 10) || 0;
+});
+
+// small UX text
+setStatus('Ready. Select a proxy and click Load.');
+
+</script>
 </body>
 </html>
