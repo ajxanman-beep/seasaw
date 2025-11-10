@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Misc Page</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .top-bar {
+      background-color: #000;
+      padding: 10px;
+      text-align: center;
+      border-bottom: 2px solid #222;
+    }
+
+    iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+
+    button {
+      background-color: #005eff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #0074ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <button onclick="window.location.href='../index.html'">← Back to Launcher</button>
+    <h2>Misc Page</h2>
+  </div>
+
+  <!-- ✅ Embed the external site -->
+  <iframe
+    src="https://peppermint995.github.io/Proxy-Testing/"
+    allowfullscreen>
+  </iframe>
+</body>
+</html>
