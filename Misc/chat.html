@@ -422,104 +422,134 @@ fileInput.addEventListener("change", async () => {
 });
 
 /* Load messages and render names with colors */
-function loadMessages() {
-  if (messagesRef) off(messagesRef);
+function loadMessages(){
+  if(messagesRef) off(messagesRef);
   chatBox.innerHTML = "";
-
-  messagesRef = query(ref(db, "messages"), orderByChild("timestamp"));
+  messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
   const messageElements = {};
 
-  // We'll keep messages in an array so we can sort properly
-  const allMessages = [];
-
-  onChildAdded(messagesRef, async (snap) => {
+  onChildAdded(messagesRef, async snap => {
     const msg = snap.val();
-    const msgKey = snap.key;
+    const wrapper = document.createElement("div");
+    wrapper.className = "message";
+    wrapper.id = "msg-" + snap.key;
 
-    // Store message data temporarily
-    allMessages.push({ key: msgKey, data: msg });
+    // format time
+    const d = new Date(msg.timestamp || Date.now());
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2,"0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const displayHour = ((hours + 11) % 12) + 1;
+    const timeStr = `${displayHour}:${minutes} ${ampm}`;
 
-    // Sort by timestamp ascending before rendering
-    allMessages.sort((a, b) => (a.data.timestamp || 0) - (b.data.timestamp || 0));
+    // suffix mapping
+    const SUFFIXES = {
+      "aj.xanman@gmail.com": " 👑",
+      "alexa_pears736@ahschools.us": " 👑",
+      "uyiog_aghay195@ahschools.us": " 🐉",
+      "carso_keller363@ahschools.us": " ⚡",
+      "legyo_dereg506@ahschools.us": " ⚡",
+      "jacks_waara234@ahschools.us": " ⚡",
+      "unclesam@gmail.com": " ⚡",
+      "o71613869@gmail.com": " 🐉"
+    };
+    const suffix = SUFFIXES[msg.email] || "";
 
-    // Clear and rebuild the DOM each time
-    chatBox.innerHTML = "";
-
-    for (const m of allMessages) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "message";
-      wrapper.id = "msg-" + m.key;
-
-      const d = new Date(m.data.timestamp || Date.now());
-      const hours = d.getHours();
-      const minutes = d.getMinutes().toString().padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      const displayHour = ((hours + 11) % 12) + 1;
-      const timeStr = `${displayHour}:${minutes} ${ampm}`;
-
-      const SUFFIXES = {
-        "aj.xanman@gmail.com": " 👑",
-        "alexa_pears736@ahschools.us": " 👑",
-        "uyiog_aghay195@ahschools.us": " 🐉",
-        "carso_keller363@ahschools.us": " ⚡",
-        "legyo_dereg506@ahschools.us": " ⚡",
-        "jacks_waara234@ahschools.us": " ⚡",
-        "unclesam@gmail.com": " ⚡",
-        "o71613869@gmail.com": " 🐉"
-      };
-      const suffix = SUFFIXES[m.data.email] || "";
-
-      let nameHtml = `<span class="name">${m.data.nickname || "Anonymous"}${suffix}</span>`;
-
-      try {
-        const userSnap = await get(ref(db, "users/" + m.data.uid));
-        if (userSnap.exists()) {
+    // determine name style: fetch user profile by uid (if available)
+    let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
+    if(msg.uid){
+      try{
+        const userSnap = await get(ref(db,"users/"+msg.uid));
+        if(userSnap.exists()){
           const u = userSnap.val();
-          if (u.color) {
+          if(u.color){
             const start = u.color.start || "#ffffff";
             const end = u.color.end || start;
             const animated = !!u.color.animated;
-            const speed = u.color.speed ? `${u.color.speed}s` : "6s";
+            const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
+
             const bg = `linear-gradient(90deg, ${start}, ${end})`;
-
-            if (animated) {
-              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${m.data.nickname || "Anonymous"}${suffix}</span>`;
+            if(animated){
+              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
             } else {
-              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${m.data.nickname || "Anonymous"}${suffix}</span>`;
+              // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
+              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
             }
+          } else {
+            nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
           }
-        }
-      } catch (e) {}
-
-      if (m.data.uid === "SYSTEM") {
-        wrapper.style.background = "#2b2b2b";
-        wrapper.style.borderLeft = "4px solid #ffaa00";
-        wrapper.style.padding = "8px";
-      }
-
-      let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
-      if (m.data.text) content += `<div style="margin-top:4px;">${escapeHtml(m.data.text)}</div>`;
-
-      if (m.data.imageUrl) {
-        const isVideo = /(\.mp4|\.webm|video\/)/i.test(m.data.imageUrl) || m.data.imageUrl.includes("video");
-        if (isVideo) {
-          content += `<div><video class="chat-video" src="${m.data.imageUrl}" controls></video></div>`;
         } else {
-          content += `<div><img class="chat-img" src="${m.data.imageUrl}" alt="image"/></div>`;
+          nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
         }
+      }catch(e){
+        nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
       }
-
-      wrapper.innerHTML = content;
-      chatBox.appendChild(wrapper);
     }
 
-    // Always scroll to bottom
+    // system message styling
+    if(msg.uid === "SYSTEM"){
+      wrapper.style.background = "#2b2b2b";
+      wrapper.style.borderLeft = "4px solid #ffaa00";
+      wrapper.style.padding = "8px";
+    }
+
+    // build message content
+    let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
+    if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
+    if(msg.imageUrl){
+      const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
+      if(isVideo){
+        content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
+      } else {
+        content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+      }
+    }
+
+    wrapper.innerHTML = content;
+
+    // delete button if owner or admin (admins cannot delete other admins' messages)
+    const currentUser = auth.currentUser;
+    if(currentUser){
+      const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
+      const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
+      if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
+        const del = document.createElement("span");
+        del.className = "delete-btn";
+        del.textContent = "[delete]";
+        del.onclick = () => {
+          if(confirm("Delete this message?")) remove(ref(db,"messages/"+snap.key));
+        };
+        wrapper.appendChild(del);
+      }
+    }
+
+    chatBox.appendChild(wrapper);
     chatBox.scrollTop = chatBox.scrollHeight;
+
+    // image/video modal click
+    const img = wrapper.querySelector(".chat-img");
+    const vid = wrapper.querySelector("video.chat-video");
+    if(img) img.onclick = () => {
+      modalVideo.style.display = "none";
+      modalImg.style.display = "block";
+      modalImg.src = img.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+    if(vid) vid.onclick = () => {
+      modalImg.style.display = "none";
+      modalVideo.style.display = "block";
+      modalVideo.src = vid.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+
+    messageElements[snap.key] = wrapper;
   });
 
-  onChildRemoved(ref(db, "messages"), (snap) => {
+  onChildRemoved(ref(db,"messages"), snap => {
     const el = document.getElementById("msg-" + snap.key);
-    if (el) el.remove();
+    if(el) el.remove();
   });
 }
 
