@@ -6,24 +6,26 @@
   <title>Prosperity | Games</title>
   <style>
     :root {
-      --bg: #07112a;
+      --bg: #0f0f1a;
       --sidebar: #141420;
       --accent: #0078ff;
       --text: #ffffff;
-      --muted: rgba(255,255,255,0.7);
-      --panel:#071a3f;
-      --card:#0f2a66;
-      --tile-shadow: 0 6px 18px rgba(0,0,0,0.6);
+      --muted: rgba(255, 255, 255, 0.7);
     }
 
-    * { box-sizing:border-box;margin:0;padding:0;font-family:"Poppins", sans-serif; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Poppins", sans-serif;
+    }
 
     body {
-      display:flex;
-      height:100vh;
-      overflow:hidden;
       background: var(--bg);
       color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
     }
 
     /* Sidebar */
@@ -96,85 +98,61 @@
       color: var(--accent);
     }
 
-    /* Main area */
+    /* Main section */
     .main {
       flex: 1;
-      padding: 18px 26px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      background: radial-gradient(ellipse at center, #121223 0%, #0b0b16 100%);
+      padding: 40px;
       overflow-y: auto;
     }
 
-    .content-card {
-      background: var(--panel);
-      padding:18px;
-      border-radius:12px;
-      box-shadow: var(--tile-shadow);
-      border:1px solid rgba(255,255,255,0.02);
-      display:flex;
-      flex-direction:column;
-      gap:12px;
+    h1 {
+      font-size: 2.2em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #0078ff, #00ff99, #ff00aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 5s ease infinite;
+      background-size: 300% 300%;
     }
 
-    .content-card h2 {
-      margin:0;
-      font-weight:600;
-      color:#fff;
-      text-align:center;
+    #search {
+      width: 300px;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 1em;
+      margin-bottom: 20px;
+      background: #1e1e2f;
+      color: white;
     }
 
-    .tile-grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap:18px;
-      padding-top:8px;
+    #game-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
     }
 
-    .tile {
-      background: var(--card);
-      border-radius:12px;
-      padding:12px;
-      min-height:120px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:flex-start;
-      gap:8px;
-      box-shadow: var(--tile-shadow);
-      position:relative;
-      overflow:hidden;
-      transition: transform .12s, box-shadow .12s;
-      border:1px solid rgba(255,255,255,0.03);
+    .game-btn {
+      background: #1f1f2e;
+      border: 1px solid #2c2c3e;
+      color: white;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 1em;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s ease;
     }
 
-    .tile:hover {
-      transform: translateY(-6px);
-      box-shadow: 0 18px 36px rgba(0,0,0,0.65);
+    .game-btn:hover {
+      background: var(--accent);
+      transform: translateY(-3px);
     }
-
-    .tile .icon {
-      width:92px;height:92px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-      display:flex;align-items:center;justify-content:center;font-size:36px;color:#fff;
-      border:1px solid rgba(255,255,255,0.03);
-    }
-
-    .tile .label {
-      width:100%;
-      text-align:center;
-      background:rgba(0,0,0,0.18);
-      color:#fff;
-      padding:6px 8px;
-      border-radius:8px;
-      font-weight:600;
-      font-size:13px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    .caption {font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-top:6px}
-
   </style>
 </head>
 <body>
@@ -194,23 +172,11 @@
   </aside>
 
   <main class="main">
-    <section class="content-card">
-      <h2>Apps & Games</h2>
-      <div class="tile-grid" id="game-buttons">
-        <div class="tile"><div class="icon">🎲</div><div class="label">Game</div></div>
-        <div class="tile"><div class="icon">🕹️</div><div class="label">Game</div></div>
-        <div class="tile"><div class="icon">🎵</div><div class="label">Game</div></div>
-        <div class="tile"><div class="icon">🔧</div><div class="label">Game</div></div>
-      </div>
-      <div class="caption">Browse the library — click an app to open</div>
-    </section>
+    <h1>All Games</h1>
+    <input type="text" id="search" placeholder="Search games..." />
+    <div id="game-buttons">Loading games...</div>
   </main>
 
-  <script>
-    // Example: highlight active nav
-    document.querySelectorAll('.nav a').forEach(link => {
-      if(link.href === window.location.href) link.classList.add('active');
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
