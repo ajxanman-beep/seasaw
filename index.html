@@ -6,17 +6,22 @@
   <title>Prosperity | Home</title>
   <style>
     :root {
-      --bg: #0f0f0f;
-      --card: #1b1b1b;
-      --accent: #00a8ff;
+      --bg: #0f0f1a;
+      --sidebar: #141420;
+      --accent: #0078ff;
       --text: #ffffff;
-      --muted: rgba(255,255,255,0.7);
+      --muted: rgba(255, 255, 255, 0.7);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Poppins", sans-serif;
     }
 
     body {
-      margin: 0;
       background: var(--bg);
-      font-family: 'Poppins', sans-serif;
       color: var(--text);
       display: flex;
       height: 100vh;
@@ -25,63 +30,93 @@
 
     /* Sidebar */
     .sidebar {
-      width: 220px;
-      background: var(--card);
+      width: 240px;
+      background: var(--sidebar);
       display: flex;
       flex-direction: column;
-      align-items: center;
       padding-top: 40px;
-      border-right: 2px solid #111;
+      border-right: 1px solid #222;
     }
 
-    .sidebar h1 {
-      font-size: 1.4em;
-      margin-bottom: 40px;
+    .logo {
+      font-size: 1.6em;
+      font-weight: 600;
+      text-align: center;
       color: var(--accent);
+      margin-bottom: 40px;
     }
 
-    .sidebar a {
-      width: 90%;
+    .nav {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 0 20px;
+      flex-grow: 1;
+    }
+
+    .nav a {
+      width: 100%;
       text-decoration: none;
       color: var(--muted);
-      background: transparent;
-      padding: 14px;
-      margin: 6px 0;
-      border-radius: 10px;
-      text-align: left;
+      padding: 14px 16px;
+      margin: 4px 0;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: 0.25s;
       font-size: 1em;
+      transition: all 0.2s ease;
     }
 
-    .sidebar a:hover {
+    .nav a:hover {
       background: var(--accent);
       color: #fff;
       transform: translateX(5px);
     }
 
-    .sidebar a span {
-      font-size: 1.2em;
+    .nav a.active {
+      background: var(--accent);
+      color: white;
     }
 
-    /* Main content */
+    .bottom-links {
+      margin-top: auto;
+      padding: 20px;
+      border-top: 1px solid #222;
+    }
+
+    .bottom-links a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      margin: 6px 0;
+      font-size: 0.9em;
+      transition: 0.2s;
+    }
+
+    .bottom-links a:hover {
+      color: var(--accent);
+    }
+
+    /* Main section */
     .main {
       flex: 1;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
       text-align: center;
+      background: radial-gradient(ellipse at center, #121223 0%, #0b0b16 100%);
+      position: relative;
     }
 
-    h2 {
-      font-size: 2.5em;
+    h1 {
+      font-size: 2.8em;
+      font-weight: 600;
+      margin-bottom: 10px;
       background: linear-gradient(90deg, #0078ff, #00ff99, #ff00aa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 20px;
       animation: gradient 5s ease infinite;
       background-size: 300% 300%;
     }
@@ -92,50 +127,58 @@
       100% { background-position: 0% 50%; }
     }
 
+    p {
+      color: var(--muted);
+      max-width: 400px;
+      margin-bottom: 30px;
+    }
+
     .button {
       background: var(--accent);
       border: none;
-      padding: 14px 30px;
-      border-radius: 10px;
+      padding: 14px 32px;
+      border-radius: 8px;
       color: white;
       font-size: 1em;
       cursor: pointer;
-      transition: 0.3s;
+      transition: 0.25s;
     }
 
     .button:hover {
       transform: scale(1.05);
-      background: #0072e5;
+      background: #0062cc;
     }
 
     footer {
       position: absolute;
-      bottom: 10px;
-      right: 20px;
+      bottom: 20px;
+      right: 30px;
       color: var(--muted);
       font-size: 0.9em;
     }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <h1>Prosperity</h1>
-    <a href="index.html"><span>🏠</span> Home</a>
-    <a href="games.html"><span>🎮</span> Games</a>
-    <a href="MoviePlayer/index.html"><span>🎥</span> Library</a>
-    <a href="Misc/Proxy.html"><span>🌐</span> Web</a>
-    <a href="Misc/chat.html"><span>💬</span> Chat</a>
-  </div>
+  <aside class="sidebar">
+    <div class="logo">Prosperity</div>
+    <nav class="nav">
+      <a href="index.html" class="active">🏠 Home</a>
+      <a href="games.html">🎮 Games</a>
+      <a href="MoviePlayer/index.html">🎥 Library</a>
+      <a href="Misc/Proxy.html">🌐 Web</a>
+      <a href="Misc/chat.html">💬 Chat</a>
+    </nav>
+    <div class="bottom-links">
+      <a href="#">⚙️ Settings</a>
+      <a href="#">👤 Profile</a>
+    </div>
+  </aside>
 
-  <div class="main">
-    <h2>Welcome to Prosperity</h2>
-    <p style="color: var(--muted); max-width: 400px;">
-      Your all-in-one hub for games, movies, chatting, and more — wherever you are.
-    </p>
-    <br>
+  <main class="main">
+    <h1>Welcome to Prosperity</h1>
+    <p>Your all-in-one place for gaming, chatting, and streaming — all from your browser.</p>
     <button class="button" onclick="window.location.href='games.html'">Start Gaming</button>
-  </div>
-
-  <footer>© 2025 Prosperity Hub</footer>
+    <footer>© 2025 Prosperity Hub</footer>
+  </main>
 </body>
 </html>
