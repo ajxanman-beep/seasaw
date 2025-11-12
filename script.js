@@ -1,14 +1,28 @@
-// Load games dynamically from games.json
-fetch('games.json')
-  .then(response => response.json())
-  .then(games => {
-    const container = document.getElementById('game-buttons');
-    const searchInput = document.getElementById('search');
+// ======= CONFIG =======
+// Change this to the URL of the site you want to fetch games from
+const targetSiteJSON = 'https://example.com/games.json'; // <-- Replace with actual URL
 
+// Your Cloudflare Worker proxy URL
+const proxyBase = 'https://embed-proxy.aj-xanman-47e.workers.dev/';
+// ======================
+
+const container = document.getElementById('game-buttons');
+const searchInput = document.getElementById('search');
+
+// Encode the target URL and append it to the proxy
+const proxyURL = `${proxyBase}?url=${encodeURIComponent(targetSiteJSON)}`;
+
+// Fetch the JSON via the Cloudflare Worker proxy
+fetch(proxyURL)
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return res.json();
+  })
+  .then(games => {
     // Sort alphabetically
     games.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
 
-    // Function to display games
+    // Display function
     function displayGames(filtered) {
       container.innerHTML = '';
       if (filtered.length === 0) {
@@ -37,5 +51,5 @@ fetch('games.json')
   })
   .catch(err => {
     console.error('Error loading games:', err);
-    document.getElementById('game-buttons').textContent = 'Failed to load games.';
+    container.textContent = 'Failed to load games.';
   });
