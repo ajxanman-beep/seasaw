@@ -1,1 +1,1 @@
-to all the teachers that blocked my website on the anoka thing Fuck you
+chat taken down because of drama
