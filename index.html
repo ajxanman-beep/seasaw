@@ -33,19 +33,19 @@
     /* Sidebar */
     .sidebar {
       width: 240px;
-      background: linear-gradient(180deg, #fff4a6, #ffd44f);
+      background: var(--sidebar);
       display: flex;
       flex-direction: column;
       padding-top: 40px;
-      border-right: 3px solid #ffe24d;
-      box-shadow: 0px 0px 15px rgba(255, 230, 0, 0.4);
+      border-right: 3px solid var(--accent);
+      box-shadow: 0px 0px 15px rgba(0,0,0,0.1);
     }
 
     .logo {
       font-size: 1.6em;
       font-weight: 700;
       text-align: center;
-      color: #ac8a00;
+      color: var(--accent-dark);
       margin-bottom: 40px;
     }
 
@@ -69,18 +69,18 @@
       gap: 10px;
       font-size: 1em;
       transition: 0.2s ease;
-      background: rgba(255, 240, 150, 0.2);
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .nav a:hover {
-      background: #ffe566;
+      background: var(--accent);
       color: black;
       transform: translateX(5px);
-      box-shadow: 0 2px 8px rgba(255, 220, 0, 0.35);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
     .nav a.active {
-      background: #ffd94d;
+      background: var(--accent);
       color: black;
       font-weight: bold;
     }
@@ -88,7 +88,7 @@
     .bottom-links {
       margin-top: auto;
       padding: 20px;
-      border-top: 2px solid #ffe24d;
+      border-top: 2px solid var(--accent);
     }
 
     .bottom-links a {
@@ -104,6 +104,16 @@
       color: black;
     }
 
+    /* Theme selector style */
+    #theme-select {
+      width: 100%;
+      padding: 6px;
+      border-radius: 6px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      font-size: 0.95em;
+    }
+
     /* Main section */
     .main {
       flex: 1;
@@ -112,14 +122,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-
-      background: radial-gradient(
-        circle at center,
-        #fffad1 0%,
-        #ffe97e 60%,
-        #fff6a8 100%
-      );
-
+      background: var(--bg);
       position: relative;
     }
 
@@ -127,7 +130,6 @@
       font-size: 3em;
       font-weight: 700;
       margin-bottom: 10px;
-
       background: linear-gradient(
         90deg,
         #fff06b,
@@ -135,10 +137,8 @@
         #ffcd00,
         #ffe869
       );
-
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-
       animation: shine 4s ease-in-out infinite;
       background-size: 300% 300%;
     }
@@ -150,7 +150,7 @@
     }
 
     p {
-      color: #6e5b00;
+      color: var(--text);
       max-width: 400px;
       margin-bottom: 30px;
       font-size: 1.1em;
@@ -161,25 +161,25 @@
       border: 2px solid var(--accent-dark);
       padding: 14px 32px;
       border-radius: 10px;
-      color: #4a3e00;
+      color: var(--text);
       font-size: 1.15em;
       cursor: pointer;
       font-weight: bold;
       transition: 0.25s ease;
-      box-shadow: 0px 0px 12px #ffe34b;
+      box-shadow: 0px 0px 12px var(--accent);
     }
 
     .button:hover {
       transform: scale(1.07);
       background: var(--accent-dark);
-      box-shadow: 0px 0px 16px #ffe34b;
+      box-shadow: 0px 0px 16px var(--accent);
     }
 
     footer {
       position: absolute;
       bottom: 20px;
       right: 30px;
-      color: #6e5b00;
+      color: var(--text);
       font-size: 0.9em;
     }
   </style>
@@ -197,6 +197,17 @@
     <div class="bottom-links">
       <a href="#">⚙️ Settings (wip)</a>
       <a href="#">👤 Profile (wip)</a>
+      <!-- Theme selector -->
+      <div style="margin-top: 20px;">
+        <label for="theme-select" style="font-weight: 600;">🎨 Theme:</label>
+        <select id="theme-select">
+          <option value="harken">Harken</option>
+          <option value="pursuer">Pursuer</option>
+          <option value="artful">Artful</option>
+          <option value="killdroid">Killdroid</option>
+          <option value="badware">Badware</option>
+        </select>
+      </div>
     </div>
   </aside>
 
@@ -206,5 +217,77 @@
     <button class="button" onclick="window.location.href='games.html'">Start Gaming</button>
     <footer>©2025 Harken Hub</footer>
   </main>
+
+  <script>
+    // Theme definitions
+    const themes = {
+      harken: {
+        '--bg-light': '#fffbe0',
+        '--bg': '#fff6a8',
+        '--sidebar': '#ffe874',
+        '--accent': '#ffd600',
+        '--accent-dark': '#e0b800',
+        '--text': '#5d4a00',
+        '--muted': 'rgba(80, 60, 0, 0.6)'
+      },
+      pursuer: {
+        '--bg-light': '#e6f5e6',
+        '--bg': '#d0f0d0',
+        '--sidebar': '#a8e6a8',
+        '--accent': '#4caf50',
+        '--accent-dark': '#357a38',
+        '--text': '#0a3d0a',
+        '--muted': 'rgba(10, 61, 10, 0.6)'
+      },
+      artful: {
+        '--bg-light': '#ffffff',
+        '--bg': '#f0f0f0',
+        '--sidebar': '#000000',
+        '--accent': '#ffffff',
+        '--accent-dark': '#ccc',
+        '--text': '#000000',
+        '--muted': 'rgba(0,0,0,0.6)'
+      },
+      killdroid: {
+        '--bg-light': '#ffebeb',
+        '--bg': '#ffcccc',
+        '--sidebar': '#800000',
+        '--accent': '#ff0000',
+        '--accent-dark': '#660000',
+        '--text': '#330000',
+        '--muted': 'rgba(51,0,0,0.6)'
+      },
+      badware: {
+        '--bg-light': '#dcdcdc',
+        '--bg': '#c0c0c0',
+        '--sidebar': '#808080',
+        '--accent': '#00ff00',
+        '--accent-dark': '#009900',
+        '--text': '#000000',
+        '--muted': 'rgba(0,0,0,0.6)'
+      }
+    };
+
+    const themeSelect = document.getElementById('theme-select');
+
+    function applyTheme(themeName) {
+      const theme = themes[themeName];
+      for (let varName in theme) {
+        document.documentElement.style.setProperty(varName, theme[varName]);
+      }
+    }
+
+    // Load saved theme from localStorage
+    const savedTheme = localStorage.getItem('theme') || 'harken';
+    themeSelect.value = savedTheme;
+    applyTheme(savedTheme);
+
+    // Change theme on select
+    themeSelect.addEventListener('change', (e) => {
+      const selected = e.target.value;
+      applyTheme(selected);
+      localStorage.setItem('theme', selected);
+    });
+  </script>
 </body>
 </html>
