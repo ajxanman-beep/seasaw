@@ -6,11 +6,13 @@
   <title>Harken | Home</title>
   <style>
     :root {
-      --bg: #d0f533;
-      --sidebar: #6E5415;
-      --accent: #7a7400;
-      --text: #FFFF00;
-      --muted: rgba(255, 255, 255, 0.7);
+      --bg-light: #fffbe0;     /* pale yellow background */
+      --bg: #fff6a8;           /* light main fill */
+      --sidebar: #ffe874;      /* medium yellow sidebar */
+      --accent: #ffd600;       /* strong golden yellow */
+      --accent-dark: #e0b800;  /* darker accent for hover */
+      --text: #5d4a00;         /* readable warm yellow-brown */
+      --muted: rgba(80, 60, 0, 0.6);
     }
 
     * {
@@ -21,7 +23,7 @@
     }
 
     body {
-      background: var(--bg);
+      background: var(--bg-light);
       color: var(--text);
       display: flex;
       height: 100vh;
@@ -31,18 +33,19 @@
     /* Sidebar */
     .sidebar {
       width: 240px;
-      background: var(--sidebar);
+      background: linear-gradient(180deg, #fff4a6, #ffd44f);
       display: flex;
       flex-direction: column;
       padding-top: 40px;
-      border-right: 1px solid #222;
+      border-right: 3px solid #ffe24d;
+      box-shadow: 0px 0px 15px rgba(255, 230, 0, 0.4);
     }
 
     .logo {
       font-size: 1.6em;
-      font-weight: 600;
+      font-weight: 700;
       text-align: center;
-      color: var(--accent);
+      color: #ac8a00;
       margin-bottom: 40px;
     }
 
@@ -57,7 +60,7 @@
     .nav a {
       width: 100%;
       text-decoration: none;
-      color: var(--muted);
+      color: var(--text);
       padding: 14px 16px;
       margin: 4px 0;
       border-radius: 8px;
@@ -65,37 +68,40 @@
       align-items: center;
       gap: 10px;
       font-size: 1em;
-      transition: all 0.2s ease;
+      transition: 0.2s ease;
+      background: rgba(255, 240, 150, 0.2);
     }
 
     .nav a:hover {
-      background: var(--accent);
-      color: #fff;
+      background: #ffe566;
+      color: black;
       transform: translateX(5px);
+      box-shadow: 0 2px 8px rgba(255, 220, 0, 0.35);
     }
 
     .nav a.active {
-      background: var(--accent);
-      color: white;
+      background: #ffd94d;
+      color: black;
+      font-weight: bold;
     }
 
     .bottom-links {
       margin-top: auto;
       padding: 20px;
-      border-top: 1px solid #222;
+      border-top: 2px solid #ffe24d;
     }
 
     .bottom-links a {
       display: block;
-      color: var(--muted);
+      color: var(--text);
       text-decoration: none;
       margin: 6px 0;
       font-size: 0.9em;
-      transition: 0.2s;
+      transition: 0.2s ease;
     }
 
     .bottom-links a:hover {
-      color: var(--accent);
+      color: black;
     }
 
     /* Main section */
@@ -106,54 +112,74 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      background: radial-gradient(ellipse at center, #121223 0%, #0b0b16 100%);
+
+      background: radial-gradient(
+        circle at center,
+        #fffad1 0%,
+        #ffe97e 60%,
+        #fff6a8 100%
+      );
+
       position: relative;
     }
 
     h1 {
-      font-size: 2.8em;
-      font-weight: 600;
+      font-size: 3em;
+      font-weight: 700;
       margin-bottom: 10px;
-      background: linear-gradient(90deg, #0078ff, #00ff99, #ff00aa);
+
+      background: linear-gradient(
+        90deg,
+        #fff06b,
+        #ffe200,
+        #ffcd00,
+        #ffe869
+      );
+
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      animation: gradient 5s ease infinite;
+
+      animation: shine 4s ease-in-out infinite;
       background-size: 300% 300%;
     }
 
-    @keyframes gradient {
+    @keyframes shine {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
 
     p {
-      color: var(--muted);
+      color: #6e5b00;
       max-width: 400px;
       margin-bottom: 30px;
+      font-size: 1.1em;
     }
 
     .button {
       background: var(--accent);
-      border: none;
+      border: 2px solid var(--accent-dark);
       padding: 14px 32px;
-      border-radius: 8px;
-      color: white;
-      font-size: 1em;
+      border-radius: 10px;
+      color: #4a3e00;
+      font-size: 1.15em;
       cursor: pointer;
-      transition: 0.25s;
+      font-weight: bold;
+      transition: 0.25s ease;
+      box-shadow: 0px 0px 12px #ffe34b;
     }
 
     .button:hover {
-      transform: scale(1.05);
-      background: #0062cc;
+      transform: scale(1.07);
+      background: var(--accent-dark);
+      box-shadow: 0px 0px 16px #ffe34b;
     }
 
     footer {
       position: absolute;
       bottom: 20px;
       right: 30px;
-      color: var(--muted);
+      color: #6e5b00;
       font-size: 0.9em;
     }
   </style>
@@ -169,8 +195,8 @@
       <a href="Misc/chat.html">💬 Chat(TAKEN DOWN)</a>
     </nav>
     <div class="bottom-links">
-      <a href="#">⚙️ Settings(wip)</a>
-      <a href="#">👤 Profile(wip)</a>
+      <a href="#">⚙️ Settings (wip)</a>
+      <a href="#">👤 Profile (wip)</a>
     </div>
   </aside>
 
