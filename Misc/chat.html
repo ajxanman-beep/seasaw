@@ -1,2 +1,852 @@
-chat removed possibly permanently because of Impersonation(carson whatever happened ts was not me bro)
-(R.I.P)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Chat Room</title>
+<style>
+  :root {
+    --bg: #121212;
+    --card: #1f1f1f;
+    --muted: rgba(255,255,255,0.7);
+    --accent: #0078ff;
+  }
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:Arial,Helvetica,sans-serif;
+    background:var(--bg);
+    color:#fff;
+  }
+  .container{
+    width:92%;
+    max-width:980px;
+    background:var(--card);
+    border-radius:12px;
+    padding:18px;
+    box-sizing:border-box;
+    border:1px solid #333;
+  }
+  #chatBox{
+    height:420px;
+    overflow:auto;
+    background:#222;
+    border-radius:8px;
+    padding:12px;
+    border:1px solid #333;
+  }
+  #inputArea{ display:flex; gap:10px; margin-top:12px; align-items:center; }
+  input[type="text"], input[type="email"], input[type="password"]{
+    padding:10px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; outline:none; flex:1;
+  }
+  input[type="file"]{ padding:6px; }
+  button{ padding:10px 12px; border-radius:6px; border:none; cursor:pointer; background:var(--accent); color:white; }
+  .muted{ color:var(--muted); font-size:0.95rem; }
+  .delete-btn{ color:#ff6666; margin-left:10px; cursor:pointer; font-size:0.85rem; }
+  .chat-img{ display:block; max-width:220px; max-height:220px; margin-top:6px; border-radius:6px; cursor:pointer; }
+  .chat-video{ display:block; max-width:320px; max-height:240px; margin-top:6px; border-radius:6px; cursor:pointer; }
+  #imgModal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); align-items:center; justify-content:center; z-index:2000; }
+  #imgModal img, #imgModal video{ max-width:94%; max-height:94%; border-radius:6px; }
+
+  /* Name rendering helpers - fixed gradient & animation support */
+  .name {
+    font-weight:700;
+    display:inline-block;
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  .name.static { color:transparent; -webkit-text-fill-color: transparent; }
+  .name.animated {
+    color:transparent;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text;
+            background-clip: text;
+    animation: gradientShift var(--speed, 5s) linear infinite;
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Admin color panel */
+  #adminColorPanel{
+    margin-top:12px;
+    background:#2a2a2a;
+    padding:12px;
+    border-radius:8px;
+    display:none;
+    border:1px solid #3a3a3a;
+  }
+  #adminColorPanel label{ display:block; font-size:0.9rem; margin-top:6px; margin-bottom:4px; color:var(--muted); }
+  #adminColorPanel .row{ display:flex; gap:8px; align-items:center; margin-top:6px; }
+  #adminColorPanel input[type="color"]{ width:48px; height:36px; padding:0; border-radius:6px; border:none; }
+  #adminColorPanel input[type="number"]{ width:80px; padding:8px; border-radius:6px; border:1px solid #333; background:#111; color:#fff; }
+  .small{ font-size:0.9rem; color:var(--muted); }
+  .top-row{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .invite-row{ display:flex; gap:8px; align-items:center; margin-top:10px; }
+
+  /* simple message block spacing */
+  .message { margin-bottom:10px; line-height:1.3; padding:6px; border-radius:6px; }
+
+  /* admin controls */
+  #adminControlPanel{ display:none; margin-top:12px; background:#2a2a2a; padding:12px; border-radius:8px; border:1px solid #3a3a3a; }
+  #userList{ margin-top:8px; max-height:260px; overflow:auto; }
+
+  /* db manager */
+  #dbManager{ display:none; margin-top:10px; background:#222; padding:8px; border-radius:8px; border:1px solid #333; }
+
+  /* theme preview */
+  .theme-swatch{ display:inline-block; width:36px; height:24px; border-radius:6px; border:1px solid #333; cursor:pointer; margin-right:6px; vertical-align:middle; }
+
+  /* responsive */
+  @media (max-width:720px){
+    #chatBox{ height:300px; }
+    .container{ padding:12px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container" id="mainContainer">
+
+    <div id="authContainer">
+      <h2 style="margin:0 0 10px 0;">Sign In or Register</h2>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <input id="email" type="email" placeholder="Email" />
+        <input id="password" type="password" placeholder="Password" />
+        <input id="inviteCode" type="text" placeholder="Invite Code (for registration)" />
+        <div style="display:flex;gap:8px;">
+          <button id="loginBtn">Login</button>
+          <button id="registerBtn" style="background:#00aa88">Register</button>
+        </div>
+        <p id="authError" style="color:#ff6666;margin:0;"></p>
+      </div>
+    </div>
+
+    <div id="chatContainer" style="display:none;">
+      <div class="top-row">
+        <h2 style="margin:0">Chat Room</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="generateInviteBtn" style="background:#00cc66">Generate Invite</button>
+          <button id="viewCodesBtn" style="background:#ffaa00">View Invite Codes</button>
+          <div id="myCodes" class="small" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div id="chatBox" aria-live="polite"></div>
+
+      <div id="inputArea">
+        <input id="messageInput" type="text" placeholder="Type a message..." />
+        <input id="fileInput" type="file" accept="image/*,video/*" />
+        <button id="sendButton">Send</button>
+        <button id="logoutBtn" style="background:#ff4444">Logout</button>
+      </div>
+
+      <!-- Admin color panel -->
+      <div id="adminColorPanel">
+        <strong>Admin Name Color / Gradient</strong>
+        <div class="small">Choose start & end colors. If start === end, the name looks like a solid color.</div>
+
+        <label>Start color</label>
+        <div class="row">
+          <input id="colorStart" type="color" value="#00ffcc" />
+          <input id="labelStartText" type="text" placeholder="#00ffcc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
+        </div>
+
+        <label>End color (for gradient)</label>
+        <div class="row">
+          <input id="colorEnd" type="color" value="#ff00cc" />
+          <input id="labelEndText" type="text" placeholder="#ff00cc" style="flex:1;padding:8px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;" />
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center;margin-top:8px;">
+          <label style="display:flex;gap:6px;align-items:center;"><input id="animatedToggle" type="checkbox" /> Animated gradient</label>
+          <label style="display:flex;gap:6px;align-items:center;">Speed (s): <input id="animSpeed" type="number" min="1" value="6" /></label>
+          <button id="saveColorBtn" style="margin-left:auto;background:#0078ff">Save Color</button>
+        </div>
+      </div>
+
+      <!-- Extended Admin Controls -->
+      <div id="adminControlPanel">
+        <strong>🛠 Admin Controls</strong>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+          <button id="broadcastBtn" style="background:#ffaa00;">Broadcast Message</button>
+          <button id="viewUsersBtn" style="background:#0078ff;">Manage Users</button>
+          <button id="dbManagerBtn" style="background:#aa66ff;">Manage Database</button>
+          <button id="themeBtn" style="background:#00cc88;">Change Chat Theme</button>
+          <button id="purgeBtn" style="background:#ff6666;">Purge All Messages</button>
+        </div>
+
+        <div id="userList" style="display:none; margin-top:12px;"></div>
+
+        <div id="dbManager" style="display:none; margin-top:12px;">
+          <strong>Realtime DB Manager</strong>
+          <div class="small">View top-level nodes and delete nodes. Dangerous: use with care.</div>
+          <div id="dbNodes" style="margin-top:8px;"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="imgModal" aria-hidden="true">
+      <img id="modalImg" alt="Expanded"/>
+      <video id="modalVideo" controls style="display:none;"></video>
+    </div>
+
+  </div>
+
+<script type="module">
+/* Firebase imports */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import {
+  getDatabase, ref, push, onChildAdded, onChildRemoved, remove,
+  query, orderByChild, off, set, get, update, onValue
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCN8ypq4TxhLwjseqnDJneBO2j_BlARz0M",
+  authDomain: "chat-or-somethig.firebaseapp.com",
+  databaseURL: "https://chat-or-somethig-default-rtdb.firebaseio.com",
+  projectId: "chat-or-somethig",
+  storageBucket: "chat-or-somethig.appspot.com",
+  messagingSenderId: "598777875087",
+  appId: "1:598777875087:web:d100536dd269bc0a9d7efa",
+  measurementId: "G-VQQ0TYRNNH"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+/* DOM */
+const authContainer = document.getElementById("authContainer");
+const chatContainer = document.getElementById("chatContainer");
+const chatBox = document.getElementById("chatBox");
+const msgInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendButton");
+const logoutBtn = document.getElementById("logoutBtn");
+const generateBtn = document.getElementById("generateInviteBtn");
+const viewBtn = document.getElementById("viewCodesBtn");
+const myCodesDiv = document.getElementById("myCodes");
+const fileInput = document.getElementById("fileInput");
+const imgModal = document.getElementById("imgModal");
+const modalImg = document.getElementById("modalImg");
+const modalVideo = document.getElementById("modalVideo");
+
+const adminPanel = document.getElementById("adminColorPanel");
+const colorStart = document.getElementById("colorStart");
+const colorEnd = document.getElementById("colorEnd");
+const labelStartText = document.getElementById("labelStartText");
+const labelEndText = document.getElementById("labelEndText");
+const animatedToggle = document.getElementById("animatedToggle");
+const animSpeed = document.getElementById("animSpeed");
+const saveColorBtn = document.getElementById("saveColorBtn");
+
+const ADMIN_EMAILS = [
+  "aj.xanman@gmail.com",
+  "alexa_pears736@ahschools.us",
+  "uyiog_aghay195@ahschools.us",
+  "carso_keller363@ahschools.us",
+  "legyo_dereg506@ahschools.us",
+  "jacks_waara234@ahschools.us",
+  "unclesam@gmail.com",
+  "o71613869@gmail.com",
+  "kokou_akey630@ahschools.us"
+];
+
+let messagesRef = null;
+let currentNickname = "Anonymous";
+
+/* helpers */
+function showError(msg){ document.getElementById("authError").innerText = msg || ""; }
+function clearMessages(){
+  chatBox.innerHTML = "";
+  if(messagesRef) off(messagesRef);
+}
+
+/* auth handlers */
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value.trim();
+  const pass = document.getElementById("password").value;
+  try{
+    const cred = await signInWithEmailAndPassword(auth,email,pass);
+    // check if banned
+    const userRef = ref(db,"users/"+cred.user.uid);
+    const snap = await get(userRef);
+    if(snap.exists() && snap.val().banned){
+      await signOut(auth);
+      return showError("You are banned from this chat.");
+    }
+    showError("");
+  }catch(err){ showError(err.message); }
+};
+
+document.getElementById("registerBtn").onclick = async () => {
+  const email = document.getElementById("email").value.trim();
+  const pass = document.getElementById("password").value;
+  const code = document.getElementById("inviteCode").value.trim();
+  if(!code) return showError("Invite code required.");
+  try{
+    const codeRef = ref(db,"inviteCodes/"+code);
+    const snap = await get(codeRef);
+    if(!snap.exists()) return showError("Invalid invite code.");
+    if(snap.val().used) return showError("Invite code already used.");
+    // check banned emails
+    const bannedSnap = await get(ref(db,"banned"));
+    if(bannedSnap.exists()){
+      const bannedObj = bannedSnap.val();
+      if(Object.values(bannedObj).some(b => b.email === email)){
+        return showError("This email is banned.");
+      }
+    }
+    await set(codeRef,{...snap.val(), used:true});
+    const cred = await createUserWithEmailAndPassword(auth,email,pass);
+    const nick = prompt("Choose a nickname:") || "Anonymous";
+    await set(ref(db,"users/"+cred.user.uid), { nickname: nick, email: email });
+    showError("");
+  }catch(err){
+    showError(err.message);
+  }
+};
+
+onAuthStateChanged(auth, async user => {
+  if(user){
+    // check banned flag
+    const userRef = ref(db,"users/"+user.uid);
+    const snap = await get(userRef);
+    if(snap.exists() && snap.val().banned){
+      await signOut(auth);
+      return alert("You are banned.");
+    }
+
+    authContainer.style.display = "none";
+    chatContainer.style.display = "block";
+    // load user profile
+    if(snap.exists()){
+      currentNickname = snap.val().nickname || "Anonymous";
+      // populate admin color inputs if admin and have color saved
+      if(ADMIN_EMAILS.includes(user.email)){
+        adminPanel.style.display = "block";
+        document.getElementById("adminControlPanel").style.display = "block";
+        const col = snap.val().color || null;
+        if(col){
+          colorStart.value = col.start || colorStart.value;
+          labelStartText.value = col.start || colorStart.value;
+          colorEnd.value = col.end || colorEnd.value;
+          labelEndText.value = col.end || colorEnd.value;
+          animatedToggle.checked = !!col.animated;
+          animSpeed.value = col.speed || 6;
+        }
+      } else {
+        adminPanel.style.display = "none";
+        document.getElementById("adminControlPanel").style.display = "none";
+      }
+    } else {
+      adminPanel.style.display = "none";
+      document.getElementById("adminControlPanel").style.display = "none";
+    }
+    loadMessages();
+  } else {
+    authContainer.style.display = "block";
+    chatContainer.style.display = "none";
+    clearMessages();
+  }
+});
+
+/* Save admin color settings */
+saveColorBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Not signed in.");
+  const start = labelStartText.value.trim() || colorStart.value;
+  const end = labelEndText.value.trim() || colorEnd.value;
+  const animated = !!animatedToggle.checked;
+  const speed = Math.max(1, Number(animSpeed.value) || 6);
+  const colorData = { start, end, animated, speed };
+  await update(ref(db,"users/"+user.uid), { color: colorData });
+  alert("Saved admin name color!");
+};
+
+/* Message send */
+async function sendMessage(text="", imageUrl=""){
+  if(!text && !imageUrl) return;
+  const user = auth.currentUser;
+  if(!user) return alert("You must be signed in.");
+  const userSnap = await get(ref(db,"users/"+user.uid));
+  if(userSnap.exists()){
+    const u = userSnap.val();
+    if(u.kicked) return alert("You’ve been kicked. Please rejoin later.");
+    if(u.banned) return alert("You are banned.");
+    if(u.muted) return alert("You are muted and cannot send messages.");
+  }
+  await push(ref(db,"messages"), {
+    uid: user.uid,
+    email: user.email,
+    nickname: currentNickname,
+    text: text,
+    imageUrl: imageUrl || "",
+    timestamp: Date.now()
+  });
+  msgInput.value = "";
+}
+
+sendBtn.onclick = ()=> sendMessage(msgInput.value);
+msgInput.addEventListener("keypress", e => { if(e.key === "Enter") sendMessage(msgInput.value); });
+
+/* File upload to Cloudinary */
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0];
+  if(!file) return;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "z1d4s4al"); // user's preset
+  try{
+    const res = await fetch("https://api.cloudinary.com/v1_1/dcbo4oozo/upload", { method:"POST", body:formData });
+    const data = await res.json();
+    if(data.secure_url){
+      await sendMessage("", data.secure_url);
+    }
+    fileInput.value = "";
+  }catch(err){
+    alert("Upload failed: " + err.message);
+  }
+});
+
+/* Load messages and render names with colors */
+function loadMessages(){
+  if(messagesRef) off(messagesRef);
+  chatBox.innerHTML = "";
+  messagesRef = query(ref(db,"messages"), orderByChild("timestamp"));
+  const messageElements = {};
+
+  onChildAdded(messagesRef, async snap => {
+    const msg = snap.val();
+    const wrapper = document.createElement("div");
+    wrapper.className = "message";
+    wrapper.id = "msg-" + snap.key;
+
+    // format time
+    const d = new Date(msg.timestamp || Date.now());
+    const hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2,"0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    const displayHour = ((hours + 11) % 12) + 1;
+    const timeStr = `${displayHour}:${minutes} ${ampm}`;
+
+    // suffix mapping
+    const SUFFIXES = {
+      "aj.xanman@gmail.com": " 👑",
+      "alexa_pears736@ahschools.us": " 👑",
+      "uyiog_aghay195@ahschools.us": " 🐉",
+      "carso_keller363@ahschools.us": " ⚡",
+      "legyo_dereg506@ahschools.us": " ⚡",
+      "jacks_waara234@ahschools.us": " ⚡",
+      "unclesam@gmail.com": " ⚡",
+      "o71613869@gmail.com": " 🐉",
+      "kokou_akey630@ahschools.us": " 🕺"
+    };
+    const suffix = SUFFIXES[msg.email] || "";
+
+    // determine name style: fetch user profile by uid (if available)
+    let nameHtml = `<span class="name" style="">${msg.nickname || "Anonymous"}${suffix}</span>`;
+    if(msg.uid){
+      try{
+        const userSnap = await get(ref(db,"users/"+msg.uid));
+        if(userSnap.exists()){
+          const u = userSnap.val();
+          if(u.color){
+            const start = u.color.start || "#ffffff";
+            const end = u.color.end || start;
+            const animated = !!u.color.animated;
+            const speed = (u.color.speed && Number(u.color.speed)) ? `${u.color.speed}s` : (u.color.speed ? `${u.color.speed}s` : "6s");
+
+            const bg = `linear-gradient(90deg, ${start}, ${end})`;
+            if(animated){
+              nameHtml = `<span class="name animated" style="--speed:${speed}; background:${bg};">${msg.nickname || "Anonymous"}${suffix}</span>`;
+            } else {
+              // static gradient or solid: ensure -webkit-text-fill-color:transparent so gradient shows
+              nameHtml = `<span class="name static" style="background:${bg}; -webkit-text-fill-color: transparent;">${msg.nickname || "Anonymous"}${suffix}</span>`;
+            }
+          } else {
+            nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+          }
+        } else {
+          nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+        }
+      }catch(e){
+        nameHtml = `<strong style="color:#fff">${msg.nickname || "Anonymous"}${suffix}</strong>`;
+      }
+    }
+
+    // system message styling
+    if(msg.uid === "SYSTEM"){
+      wrapper.style.background = "#2b2b2b";
+      wrapper.style.borderLeft = "4px solid #ffaa00";
+      wrapper.style.padding = "8px";
+    }
+
+    // build message content
+    let content = `<div>${nameHtml} <span class="muted">(${timeStr}):</span></div>`;
+    if(msg.text) content += `<div style="margin-top:4px;">${escapeHtml(msg.text)}</div>`;
+    if(msg.imageUrl){
+      const isVideo = /(\.mp4|\.webm|video\/)/i.test(msg.imageUrl) || msg.imageUrl.includes("video");
+      if(isVideo){
+        content += `<div><video class="chat-video" src="${msg.imageUrl}" controls></video></div>`;
+      } else {
+        content += `<div><img class="chat-img" src="${msg.imageUrl}" alt="image"/></div>`;
+      }
+    }
+
+    wrapper.innerHTML = content;
+
+    // delete button if owner or admin (admins cannot delete other admins' messages)
+    const currentUser = auth.currentUser;
+    if(currentUser){
+      const targetIsAdmin = ADMIN_EMAILS.includes(msg.email);
+      const currentIsAdmin = ADMIN_EMAILS.includes(currentUser.email);
+      if(msg.uid === currentUser.uid || (currentIsAdmin && !targetIsAdmin)){
+        const del = document.createElement("span");
+        del.className = "delete-btn";
+        del.textContent = "[delete]";
+        del.onclick = () => {
+          if(confirm("Delete this message?")) remove(ref(db,"messages/"+snap.key));
+        };
+        wrapper.appendChild(del);
+      }
+    }
+
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // image/video modal click
+    const img = wrapper.querySelector(".chat-img");
+    const vid = wrapper.querySelector("video.chat-video");
+    if(img) img.onclick = () => {
+      modalVideo.style.display = "none";
+      modalImg.style.display = "block";
+      modalImg.src = img.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+    if(vid) vid.onclick = () => {
+      modalImg.style.display = "none";
+      modalVideo.style.display = "block";
+      modalVideo.src = vid.src;
+      imgModal.style.display = "flex";
+      imgModal.setAttribute("aria-hidden","false");
+    };
+
+    messageElements[snap.key] = wrapper;
+  });
+
+  onChildRemoved(ref(db,"messages"), snap => {
+    const el = document.getElementById("msg-" + snap.key);
+    if(el) el.remove();
+  });
+}
+
+/* small utility to escape HTML in messages */
+function escapeHtml(text){
+  if(!text) return "";
+  return text
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* modal hide */
+imgModal.onclick = (e) => {
+  // close unless clicking the video controls
+  if(e.target === modalVideo) return;
+  imgModal.style.display = "none";
+  modalImg.src = "";
+  modalVideo.src = "";
+  modalImg.style.display = "block";
+  modalVideo.style.display = "none";
+  imgModal.setAttribute("aria-hidden","true");
+};
+
+/* Invite code generation/view */
+generateBtn.onclick = async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Sign in first.");
+  const userRef = ref(db,`users/${user.uid}/inviteCodes`);
+  const snap = await get(userRef);
+  const codes = snap.exists() ? Object.keys(snap.val()) : [];
+  if(!ADMIN_EMAILS.includes(user.email) && codes.length >= 6) return alert("You can only create 6 invite codes.");
+  const newCode = Math.random().toString(36).substring(2,8).toUpperCase();
+  await set(ref(db,"inviteCodes/"+newCode), { used:false, creator:user.uid, createdAt: Date.now() });
+  await set(ref(db,`users/${user.uid}/inviteCodes/${newCode}`), { createdAt: Date.now() });
+  alert("New invite code generated. Click 'View Invite Codes' to see it.");
+};
+
+viewBtn.onclick = () => {
+  if(myCodesDiv.style.display === "none" || myCodesDiv.style.display === ""){
+    displayMyCodes();
+    myCodesDiv.style.display = "block";
+    viewBtn.textContent = "Hide Invite Codes";
+  } else {
+    myCodesDiv.style.display = "none";
+    viewBtn.textContent = "View Invite Codes";
+  }
+};
+
+async function displayMyCodes(){
+  const user = auth.currentUser;
+  if(!user) return myCodesDiv.innerText = "Sign in to see codes.";
+  const snap = await get(ref(db,`users/${user.uid}/inviteCodes`));
+  const codes = snap.exists() ? Object.keys(snap.val()) : [];
+  myCodesDiv.innerText = codes.length ? "Your codes: " + codes.join(", ") : "No invite codes yet";
+}
+
+/* logout */
+logoutBtn.onclick = () => signOut(auth);
+
+/* small UI helpers: sync color input text fields with color pickers */
+labelStartText.addEventListener("input", () => {
+  const v = labelStartText.value.trim();
+  if(/^#([0-9A-Fa-f]{6})$/.test(v)) colorStart.value = v;
+});
+labelEndText.addEventListener("input", () => {
+  const v = labelEndText.value.trim();
+  if(/^#([0-9A-Fa-f]{6})$/.test(v)) colorEnd.value = v;
+});
+colorStart.addEventListener("input", () => { labelStartText.value = colorStart.value; });
+colorEnd.addEventListener("input", () => { labelEndText.value = colorEnd.value; });
+
+/* ensure chat stays scrolled on new messages when focus not on older ones */
+chatBox.addEventListener('DOMNodeInserted', e => {
+  const el = e.target;
+  if(el && el.classList && el.classList.contains('message')){
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+});
+
+/* ADMIN: View all users and manage them (now with unkick/unban and admin protections) */
+const userListDiv = document.getElementById("userList");
+document.getElementById("viewUsersBtn").onclick = async () => {
+  if(userListDiv.style.display === "none" || userListDiv.style.display === ""){
+    const snap = await get(ref(db, "users"));
+    if(!snap.exists()) return alert("No users found.");
+    const users = snap.val();
+    userListDiv.innerHTML = "<strong>Users:</strong><br>";
+
+    const currentUser = auth.currentUser;
+    const currentIsAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email);
+
+    Object.entries(users).forEach(([uid, data]) => {
+      const isMuted = data.muted || false;
+      const isKicked = data.kicked || false;
+      const isBanned = data.banned || false;
+      const email = data.email || "";
+      const nick = data.nickname || "Unnamed";
+      const targetIsAdmin = ADMIN_EMAILS.includes(email);
+
+      // build controls but disable actions that affect other admins
+      const controls = [];
+      if(!targetIsAdmin || (currentUser && currentUser.uid === uid)){
+        // Kick / Unkick
+        controls.push(`<button onclick="toggleKick('${uid}', ${isKicked})" style="background:${isKicked ? '#00cc66' : '#ff5555'};">${isKicked ? 'Unkick' : 'Kick'}</button>`);
+        // Mute / Unmute
+        controls.push(`<button onclick="toggleMute('${uid}', ${isMuted})" style="background:${isMuted ? '#00cc66' : '#ffaa00'};">${isMuted ? 'Unmute' : 'Mute'}</button>`);
+        // Ban / Unban
+        controls.push(`<button onclick="toggleBan('${uid}', '${email}', ${isBanned})" style="background:${isBanned ? '#00cc66' : '#aa00ff'};">${isBanned ? 'Unban' : 'Ban'}</button>`);
+        // Auth actions (server-side) - queued
+        controls.push(`<button onclick="requestAuthAction('${uid}','${email}','disable')" style="background:#cc6633;">Disable Auth</button>`);
+        controls.push(`<button onclick="requestAuthAction('${uid}','${email}','delete')" style="background:#aa3333;">Delete Auth</button>`);
+      } else {
+        controls.push(`<span class="small">Admin account — actions disabled</span>`);
+      }
+
+      userListDiv.innerHTML += `
+        <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+          <div style="flex:1;">
+            <strong>${nick}</strong><div class="small">${email}</div>
+          </div>
+          <div style="display:flex; gap:6px;">${controls.join('')}</div>
+        </div>
+      `;
+    });
+    userListDiv.style.display = "block";
+  } else {
+    userListDiv.style.display = "none";
+  }
+};
+
+// toggle kick/unkick
+window.toggleKick = async (uid, currentlyKicked) => {
+  const newVal = !currentlyKicked;
+  await update(ref(db, "users/"+uid), { kicked: newVal });
+  alert(newVal ? "User kicked." : "User un-kicked.");
+  document.getElementById("viewUsersBtn").click(); // refresh
+};
+
+// toggle mute/unmute
+window.toggleMute = async (uid, currentlyMuted) => {
+  const newVal = !currentlyMuted;
+  await update(ref(db, "users/"+uid), { muted: newVal });
+  alert(newVal ? "User muted." : "User unmuted.");
+  document.getElementById("viewUsersBtn").click(); // refresh
+};
+
+// toggle ban/unban
+window.toggleBan = async (uid, email, currentlyBanned) => {
+  const newVal = !currentlyBanned;
+  if(newVal){
+    if(!confirm(`Permanently ban ${email || 'this user'}?`)) return;
+    await update(ref(db, "users/"+uid), { banned: true });
+    await set(ref(db, "banned/"+uid), { email: email || "unknown", bannedAt: Date.now() });
+    alert("User banned.");
+  } else {
+    if(!confirm(`Unban ${email || 'this user'}?`)) return;
+    await update(ref(db, "users/"+uid), { banned: false });
+    await remove(ref(db, "banned/"+uid));
+    alert("User unbanned.");
+  }
+  document.getElementById("viewUsersBtn").click(); // refresh
+};
+
+/* Admin -> request Auth actions (disable/delete) that must be processed server-side with Admin SDK.
+   We queue the request under /adminActions and include requester info.
+*/
+window.requestAuthAction = async (uid, email, actionType) => {
+  const requester = auth.currentUser;
+  if(!requester) return alert("Sign in first.");
+  if(!confirm(`Queue ${actionType} for ${email || uid}? This must be processed by a trusted server (Cloud Function). Continue?`)) return;
+  await push(ref(db, "adminActions"), {
+    type: actionType,
+    targetUid: uid,
+    targetEmail: email,
+    requestedByUid: requester.uid,
+    requestedByEmail: requester.email,
+    timestamp: Date.now()
+  });
+  alert("Auth action queued. Deploy a Cloud Function / server to process items in /adminActions using the Firebase Admin SDK.");
+};
+
+/* Broadcast system messages */
+document.getElementById("broadcastBtn").onclick = async () => {
+  const msg = prompt("Enter a system message to broadcast:");
+  if(!msg) return;
+  await push(ref(db, "messages"), {
+    uid: "SYSTEM",
+    email: "system@chat",
+    nickname: "📢 System",
+    text: msg,
+    timestamp: Date.now()
+  });
+};
+
+/* Purge all messages (admin) */
+document.getElementById("purgeBtn").onclick = async () => {
+  if(!confirm("Purge ALL messages? This cannot be undone.")) return;
+  await remove(ref(db,"messages"));
+  alert("All messages purged.");
+};
+
+/* Database manager UI */
+document.getElementById("dbManagerBtn").onclick = async () => {
+  const dbManager = document.getElementById("dbManager");
+  if(dbManager.style.display === "none" || dbManager.style.display === ""){
+    dbManager.style.display = "block";
+    const rootSnap = await get(ref(db, "/"));
+    const nodesDiv = document.getElementById("dbNodes");
+    nodesDiv.innerHTML = "";
+    if(!rootSnap.exists()) return nodesDiv.innerText = "No data in DB.";
+    const obj = rootSnap.val();
+    Object.keys(obj).forEach(key => {
+      nodesDiv.innerHTML += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+        <div><strong>${key}</strong> <span class="small">(${typeof obj[key]})</span></div>
+        <div>
+          <button onclick="viewNode('${key}')">View</button>
+          <button onclick="deleteNode('${key}')" style="background:#aa3333;">Delete</button>
+        </div>
+      </div>`;
+    });
+  } else {
+    dbManager.style.display = "none";
+  }
+};
+
+window.viewNode = async (key) => {
+  const snap = await get(ref(db, key));
+  if(!snap.exists()) return alert("No data at that node.");
+  const pretty = JSON.stringify(snap.val(), null, 2);
+  const win = window.open("");
+  win.document.write(`<pre>${escapeHtml(pretty)}</pre>`);
+};
+
+window.deleteNode = async (key) => {
+  if(!confirm(`Delete node "${key}" from database? This is irreversible.`)) return;
+  await remove(ref(db, key));
+  alert(`Deleted node "${key}".`);
+  document.getElementById("dbManagerBtn").click(); // refresh
+};
+
+
+/* Theme controls: allow admin to set a global theme saved in DB */
+document.getElementById("themeBtn").onclick = async () => {
+  const newBg = prompt("Enter background CSS value (e.g. #121212 or linear-gradient(90deg,#111,#444)):", getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || "#121212");
+  if(!newBg) return;
+  document.documentElement.style.setProperty('--bg', newBg);
+  await set(ref(db, "globalTheme"), { bg: newBg, updatedAt: Date.now() });
+};
+
+/* Listen for global theme updates */
+onValue(ref(db, "globalTheme"), snap => {
+  if(snap.exists()){
+    const theme = snap.val();
+    if(theme.bg) document.documentElement.style.setProperty('--bg', theme.bg);
+  }
+});
+
+/* Listen for kicked/banned flags and force sign out if current user is affected */
+onAuthStateChanged(auth, async user => {
+  if(!user) return;
+  const snap = await get(ref(db,"users/"+user.uid));
+  if(snap.exists()){
+    const u = snap.val();
+    if(u.kicked){
+      try{ await signOut(auth); alert("You have been kicked by an admin."); }catch(e){}
+    }
+    if(u.banned){
+      try{ await signOut(auth); alert("You are banned."); }catch(e){}
+    }
+  }
+});
+
+/* small listener to keep client up to date when their user flags change */
+function watchCurrentUserFlags(){
+  const user = auth.currentUser;
+  if(!user) return;
+  const userRefLocal = ref(db,"users/"+user.uid);
+  onValue(userRefLocal, snap => {
+    if(!snap.exists()) return;
+    const u = snap.val();
+    if(u.kicked){
+      signOut(auth).catch(()=>{});
+      alert("You have been kicked by an admin.");
+    }
+    if(u.banned){
+      signOut(auth).catch(()=>{});
+      alert("You are banned.");
+    }
+  });
+}
+onAuthStateChanged(auth, u => { if(u) watchCurrentUserFlags(); });
+
+</script>
+</body>
+</html>
